@@ -135,7 +135,7 @@ plotd <- plot(ni$zx, ni$zy, ylab = ni$yexpr, xlab = ni$xexpr, type = "l",
 plotd
 ```
 
-## Carry trade
+## Carry trades
 
 The carry trade strategy has been popular around investors since 1980, since on average, the returns are positive. As can be seen in the graph below, the Deutsche Bank G10 harvest Index and the South African ZAR follow eachother, with the ZAR being slightly more volatile. This means that carry trades serve as a good indicater for the USD/ZAR exchange rate. 
 

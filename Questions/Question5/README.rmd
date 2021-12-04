@@ -21,6 +21,17 @@ msci <- read_rds("data/msci.rds")
 bonds <- read_rds("data/bonds_10y.rds")
 comms <- read_rds("data/comms.rds")
 
+msci %>%mutate(MSCI = gsub("MSCI_", "", Name)) %>% select(-Name) %>% pull(MSCI) %>% unique
+
+msci %>% mutate(MSCI = gsub("MSCI_", "", Name)) %>% 
+    select(-Name) %>%
+    filter(MSCI == c("RE", "USREIT", "ACWI")) %>% spread(Price, )
+    
+
+comms %>% pull(Name) %>% unique
+
+bonds %>% pull(Name) %>% unique
+
 
 ```
 
