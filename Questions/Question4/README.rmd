@@ -4,21 +4,161 @@ output:
     variant: markdown_github
 ---
 
-# Purpose
+# Question 4 
 
-Purpose of this work folder.
-
-Ideally store a minimum working example data set in data folder.
-
-Add binary files in bin, and closed R functions in code. Human Readable settings files (e.g. csv) should be placed in settings/
+Over the past couple of year, the South African ZAR has been more volatile when compared to the major currencies. There are many factors that affect this volatility. A few of the most prominent include political unrest, central banking policies, economic performance and outlier events. If any of these underpinnings evolve into a dominant market driver, exchange rate volatility facing the ZAR spikes. The result is a destabilisation of the rand and turbulence in the forex valuations of related pairs. 
 
 
 ```{r}
 
 rm(list = ls()) # Clean your environment:
-gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+getwd()# garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+pacman::p_install_gh('Nicktz/fmxdat')
 library(tidyverse)
-list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+library(rugarch)
+pacman::p_load(xtable)
+pacman::p_load(PerformanceAnalytics)
+pacman::p_load("tidyverse", "devtools", "rugarch", "forecast", 
+    "tbl2xts", "lubridate", "PerformanceAnalytics", "ggthemes", 
+    "robustbase")
+
+cncy <- read_rds("data/currencies.rds")
+cncy_Carry <- read_rds("data/cncy_Carry.rds")
+cncy_value <- read_rds("data/cncy_value.rds")
+cncyIV <- read_rds("data/cncyIV.rds")
+bbdxy <- read_rds("data/bbdxy.rds")
+
 ```
 
+
+
+
+```{r}
+
+cncy %>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Currency", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+```
+
+Since the graph above is difficult to read, I have decided to only compare the major curries to get a clearer picture. The graph below displays the Euro, the Great British Pound, the Australian Dollar, the Canadian dollar, the Japanese Yen and the South African Rand. 
+
+```{r}
+#cncy %>% group_by(Name) %>% pull(Name) %>% unique 
+plota <- cncy %>% filter(Name==c("Australia_Cncy_Inv", "Canada_Cncy", "SouthAfrica_Cncy","UK_Cncy_Inv", "EU_Cncy_Inv", "Japan_Cncy"))%>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    facet_wrap(~Name, scales = "free_y") +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Analzying each currency relative to USD", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+plota
+```
+
+## Implied Volatility 
+
+Implied volatility is a measure of the expected risk with regards to the underlying for an option. The measure reflects the market’s view on the likelihood of movements in prices for the underlying, having the tendency to increase when prices decline and thus reflect the riskier picture
+ 
+Implied volatility is commonly used by the market to pre-empt future movements of the underlying. High volatility suggests large price swings, while muted volatility could mean that price fluctuations may be very much contained.
+
+Implied Volatility is important because it  not only incorporates historical information about asset prices but also market participants' expectations, frequently not easily quantifiable, about future events. Looking at the implied volatility graph below, it indicates that South African Rand experiences much higher volatility compared to other currencies. It should be kept in mind that South Africa is an emerging market whereas the other countries curries that are being analyzed are all developed countries. 
+```{r}
+
+cncyIV %>% group_by(Name) %>% pull(Name) %>% unique 
+
+plotb <- cncyIV %>% filter(Name==c("Australia_IV", "Canada_IV", "SouthAfrica_IV","UK_IV", "EU_IV", "Japan_IV"))%>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Implied Volatility ", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+plotb
+
+```
+
+## Univariate GARCH 
+
+The graph below shows the USD/ZAR exchange rate. As you can see, the periods of volatility clustering increases with time. The most volatility was experiences during the 2008 Global Financial crisis. This graph gives a good indication to see where the periods of high and low volatility are. 
+
+```{r}
+plotc <- cncy %>% filter(Name==c("SouthAfrica_Cncy")) %>% group_by(Name) %>%  mutate(dlogprice = log(Price) - log(lag(Price))) %>%
+    filter(date > first(date)) %>%
+    ggplot() +
+    geom_line(aes(x=date,y=dlogprice), color="red") + theme_bw() +  
+    labs(x = "Dates", y = "", title = "USD/ZAR", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+
+plotc
+    
+```
+In the table below, there are a few summary statistics of the garch model. 
+
+results ='asis'
+```{r}
+
+data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>% group_by(Name) %>%
+    mutate(dlogprice = log(Price) - log(lag(Price))) %>%
+    filter(date > first(date)) %>%
+    select(date, dlogprice)
+
+garch11 <- 
+  
+  ugarchspec(
+    
+    variance.model = list(model = c("sGARCH","gjrGARCH","eGARCH","fGARCH","apARCH")[1], 
+                          
+    garchOrder = c(1, 1)), 
+    
+    mean.model = list(armaOrder = c(1, 0), include.mean = TRUE), 
+    
+    distribution.model = c("norm", "snorm", "std", "sstd", "ged", "sged", "nig", "ghyp", "jsu")[1])
+
+garchfit1 = ugarchfit(spec = garch11,data = data$dlogprice)
+slotNames(garchfit1)
+names(garchfit1@fit)
+names(garchfit1@model)
+garchfit1@fit$matcoef 
+
+Table <- xtable(garchfit1@fit$matcoef)
+
+print(Table, type = "latex", comment = FALSE)
+
+```
+The Persistence of the garch is 0.998, which is expected as the persistence is the alpha and the beta summed together. The news impact curve also reflects the volatility asymmetry.
+
+```{r}
+ni <- newsimpact(z = NULL, garchfit1)
+plotd <- plot(ni$zx, ni$zy, ylab = ni$yexpr, xlab = ni$xexpr, type = "l", 
+    main = "News Impact Curve")
+plotd
+```
+
+## Carry trade
+
+The carry trade strategy has been popular around investors since 1980, since on average, the returns are positive. As can be seen in the graph below, the Deutsche Bank G10 harvest Index and the South African ZAR follow eachother, with the ZAR being slightly more volatile. This means that carry trades serve as a good indicater for the USD/ZAR exchange rate. 
+
+```{r}
+carry <- cncy_Carry %>% mutate(carry_c = log(Price) - log(lag(Price))) %>%
+    mutate(scaledret = (carry_c - mean(carry_c, na.rm = T))) %>% 
+filter(date > first(date))  %>%
+    select(date, carry_c)
+   
+
+data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>%
+    mutate(SA_ZAR = log(Price) - log(lag(Price))) %>%
+    mutate(scaledprice = (SA_ZAR - mean(SA_ZAR, na.rm = T))) %>%
+    filter(date > first(date)) %>%
+     filter(date >= lubridate::ymd(20000919)) %>%
+    select(date, SA_ZAR)
+
+
+plotg <- left_join(carry, data, by= "date") %>% gather(Name, price, -date) %>% ggplot() + geom_line(aes(x=date,y=price, color=Name)) +
+     theme_bw() +  
+    labs(x = "Dates", y = "log returns", title = "South African ZAR vs Currency Carry", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currencies"))
+
+plotg
+
+```
 

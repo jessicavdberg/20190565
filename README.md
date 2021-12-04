@@ -10,8 +10,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 395661 21.2     810990 43.4   638940 34.2
-    ## Vcells 716498  5.5    8388608 64.0  1633464 12.5
+    ## Ncells 395930 21.2     811758 43.4   638940 34.2
+    ## Vcells 718439  5.5    8388608 64.0  1633464 12.5
 
 ``` r
 library(tidyverse)
@@ -67,6 +67,24 @@ library(devtools)
     ## Loading required package: usethis
 
 ``` r
+library(rugarch)
+```
+
+    ## Loading required package: parallel
+
+    ## 
+    ## Attaching package: 'rugarch'
+
+    ## The following object is masked from 'package:purrr':
+    ## 
+    ##     reduce
+
+    ## The following object is masked from 'package:stats':
+    ## 
+    ##     sigma
+
+``` r
+pacman::p_load(xtable)
 if (!require(FactoMineR)) install.packages("FactoMineR")
 ```
 
@@ -96,6 +114,11 @@ RebDays <- read_rds("data/Rebalance_days.rds")
 msci <- read_rds("data/msci.rds")
 bonds <- read_rds("data/bonds_10y.rds")
 comms <- read_rds("data/comms.rds")
+cncy <- read_rds("data/currencies.rds")
+cncy_Carry <- read_rds("data/cncy_Carry.rds")
+cncy_value <- read_rds("data/cncy_value.rds")
+cncyIV <- read_rds("data/cncyIV.rds")
+bbdxy <- read_rds("data/bbdxy.rds")
 ```
 
 # Question 1
@@ -251,13 +274,8 @@ T40 <- read_rds("data/T40.rds") %>% na.locf(.,na.rm=T, 5) %>%
     mutate(Tickers = gsub(" SJ Equity", "", Tickers))
 
 return_mat <- T40 %>% spread(Tickers,Return) 
-colSums(is.na(T40))
-```
+#colSums(is.na(T40))
 
-    ##    date Tickers  Return 
-    ##       0       0       0
-
-``` r
 impute_missing_returns <- function(return_mat, impute_returns_method = "NONE", Seed = 1234){
   # Make sure we have a date column called date:
   if( !"date" %in% colnames(return_mat) ) stop("No 'date' column provided in return_mat. Try again please.")
@@ -342,16 +360,16 @@ d <- str(pca)
 ```
 
     ## List of 5
-    ##  $ sdev    : num [1:92] 2.82 1.6 1.31 1.24 1.14 ...
-    ##  $ rotation: num [1:92, 1:92] 0.2596 0.022 0.0111 0.2127 0.1217 ...
+    ##  $ sdev    : num [1:92] 2.8 1.63 1.3 1.24 1.16 ...
+    ##  $ rotation: num [1:92, 1:92] 0.26034 0.02084 0.00814 0.21703 0.11249 ...
     ##   ..- attr(*, "dimnames")=List of 2
     ##   .. ..$ : chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
     ##   .. ..$ : chr [1:92] "PC1" "PC2" "PC3" "PC4" ...
-    ##  $ center  : Named num [1:92] 0.00000431 -0.00000612 0.00001849 0.00001858 0.00000792 ...
+    ##  $ center  : Named num [1:92] 0.00000431 -0.00001956 0.00000144 0.00001858 0.00000734 ...
     ##   ..- attr(*, "names")= chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
-    ##  $ scale   : Named num [1:92] 0.000281 0.000843 0.000831 0.002478 0.00057 ...
+    ##  $ scale   : Named num [1:92] 0.000281 0.000748 0.000975 0.002478 0.000635 ...
     ##   ..- attr(*, "names")= chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
-    ##  $ x       : num [1:3458, 1:92] 2.19 -2.03 -2.22 -3.19 2.47 ...
+    ##  $ x       : num [1:3458, 1:92] -1.14 -2.96 -1.6 -2.13 1.61 ...
     ##   ..- attr(*, "dimnames")=List of 2
     ##   .. ..$ : NULL
     ##   .. ..$ : chr [1:92] "PC1" "PC2" "PC3" "PC4" ...
@@ -367,60 +385,60 @@ a
 
     ## Importance of components:
     ##                            PC1     PC2     PC3     PC4     PC5     PC6     PC7
-    ## Standard deviation     2.81843 1.60440 1.30697 1.24477 1.14201 1.12508 1.12183
-    ## Proportion of Variance 0.08634 0.02798 0.01857 0.01684 0.01418 0.01376 0.01368
-    ## Cumulative Proportion  0.08634 0.11432 0.13289 0.14973 0.16391 0.17767 0.19135
-    ##                            PC8     PC9    PC10    PC11    PC12    PC13    PC14
-    ## Standard deviation     1.11687 1.10520 1.10165 1.09514 1.08829 1.08222 1.07915
-    ## Proportion of Variance 0.01356 0.01328 0.01319 0.01304 0.01287 0.01273 0.01266
-    ## Cumulative Proportion  0.20490 0.21818 0.23137 0.24441 0.25728 0.27001 0.28267
-    ##                           PC15    PC16    PC17    PC18    PC19    PC20    PC21
-    ## Standard deviation     1.07320 1.06893 1.06400 1.06286 1.06034 1.05628 1.05017
-    ## Proportion of Variance 0.01252 0.01242 0.01231 0.01228 0.01222 0.01213 0.01199
-    ## Cumulative Proportion  0.29519 0.30761 0.31992 0.33219 0.34442 0.35654 0.36853
-    ##                          PC22    PC23   PC24    PC25    PC26    PC27    PC28
-    ## Standard deviation     1.0462 1.04359 1.0419 1.03851 1.03694 1.03231 1.02883
-    ## Proportion of Variance 0.0119 0.01184 0.0118 0.01172 0.01169 0.01158 0.01151
-    ## Cumulative Proportion  0.3804 0.39227 0.4041 0.41579 0.42748 0.43906 0.45056
-    ##                           PC29    PC30    PC31    PC32    PC33   PC34    PC35
-    ## Standard deviation     1.02652 1.02386 1.01897 1.01733 1.01364 1.0107 1.00996
-    ## Proportion of Variance 0.01145 0.01139 0.01129 0.01125 0.01117 0.0111 0.01109
-    ## Cumulative Proportion  0.46202 0.47341 0.48470 0.49595 0.50712 0.5182 0.52931
-    ##                          PC36    PC37    PC38    PC39    PC40    PC41    PC42
-    ## Standard deviation     1.0061 1.00339 0.99982 0.99320 0.99176 0.98835 0.98632
-    ## Proportion of Variance 0.0110 0.01094 0.01087 0.01072 0.01069 0.01062 0.01057
-    ## Cumulative Proportion  0.5403 0.55125 0.56212 0.57284 0.58353 0.59415 0.60472
-    ##                           PC43    PC44    PC45    PC46    PC47    PC48    PC49
-    ## Standard deviation     0.98393 0.98158 0.97866 0.97498 0.97142 0.96735 0.96519
-    ## Proportion of Variance 0.01052 0.01047 0.01041 0.01033 0.01026 0.01017 0.01013
-    ## Cumulative Proportion  0.61525 0.62572 0.63613 0.64646 0.65672 0.66689 0.67702
-    ##                           PC50    PC51    PC52    PC53    PC54    PC55    PC56
-    ## Standard deviation     0.96101 0.95852 0.95580 0.95277 0.95007 0.94613 0.94360
-    ## Proportion of Variance 0.01004 0.00999 0.00993 0.00987 0.00981 0.00973 0.00968
-    ## Cumulative Proportion  0.68705 0.69704 0.70697 0.71684 0.72665 0.73638 0.74606
-    ##                           PC57   PC58    PC59    PC60    PC61    PC62    PC63
-    ## Standard deviation     0.94076 0.9399 0.93629 0.93381 0.93037 0.92351 0.92260
-    ## Proportion of Variance 0.00962 0.0096 0.00953 0.00948 0.00941 0.00927 0.00925
-    ## Cumulative Proportion  0.75568 0.7653 0.77481 0.78429 0.79369 0.80296 0.81222
-    ##                           PC64    PC65    PC66    PC67    PC68    PC69    PC70
-    ## Standard deviation     0.91367 0.90905 0.90547 0.90051 0.89590 0.89118 0.88563
-    ## Proportion of Variance 0.00907 0.00898 0.00891 0.00881 0.00872 0.00863 0.00853
-    ## Cumulative Proportion  0.82129 0.83027 0.83918 0.84800 0.85672 0.86536 0.87388
+    ## Standard deviation     2.80330 1.62874 1.30409 1.23551 1.15805 1.13019 1.11901
+    ## Proportion of Variance 0.08542 0.02883 0.01849 0.01659 0.01458 0.01388 0.01361
+    ## Cumulative Proportion  0.08542 0.11425 0.13274 0.14933 0.16391 0.17779 0.19140
+    ##                           PC8     PC9    PC10    PC11    PC12    PC13   PC14
+    ## Standard deviation     1.1102 1.10532 1.09946 1.09383 1.08831 1.08697 1.0851
+    ## Proportion of Variance 0.0134 0.01328 0.01314 0.01301 0.01287 0.01284 0.0128
+    ## Cumulative Proportion  0.2048 0.21808 0.23122 0.24422 0.25710 0.26994 0.2827
+    ##                           PC15    PC16    PC17   PC18    PC19   PC20    PC21
+    ## Standard deviation     1.08189 1.07768 1.07069 1.0681 1.06486 1.0595 1.05319
+    ## Proportion of Variance 0.01272 0.01262 0.01246 0.0124 0.01233 0.0122 0.01206
+    ## Cumulative Proportion  0.29546 0.30808 0.32054 0.3329 0.34527 0.3575 0.36953
+    ##                           PC22    PC23    PC24    PC25    PC26    PC27    PC28
+    ## Standard deviation     1.05245 1.04661 1.04607 1.04321 1.03930 1.03611 1.03200
+    ## Proportion of Variance 0.01204 0.01191 0.01189 0.01183 0.01174 0.01167 0.01158
+    ## Cumulative Proportion  0.38157 0.39347 0.40537 0.41720 0.42894 0.44061 0.45218
+    ##                           PC29    PC30    PC31    PC32    PC33    PC34    PC35
+    ## Standard deviation     1.02755 1.02535 1.02350 1.02206 1.01578 1.00856 1.00763
+    ## Proportion of Variance 0.01148 0.01143 0.01139 0.01135 0.01122 0.01106 0.01104
+    ## Cumulative Proportion  0.46366 0.47509 0.48647 0.49783 0.50904 0.52010 0.53114
+    ##                           PC36    PC37    PC38    PC39    PC40   PC41    PC42
+    ## Standard deviation     1.00178 1.00064 0.99600 0.99248 0.99015 0.9874 0.98569
+    ## Proportion of Variance 0.01091 0.01088 0.01078 0.01071 0.01066 0.0106 0.01056
+    ## Cumulative Proportion  0.54204 0.55293 0.56371 0.57442 0.58507 0.5957 0.60623
+    ##                           PC43    PC44    PC45    PC46   PC47    PC48    PC49
+    ## Standard deviation     0.98095 0.97688 0.97538 0.97296 0.9688 0.96800 0.96668
+    ## Proportion of Variance 0.01046 0.01037 0.01034 0.01029 0.0102 0.01019 0.01016
+    ## Cumulative Proportion  0.61669 0.62706 0.63740 0.64769 0.6579 0.66808 0.67824
+    ##                           PC50    PC51    PC52    PC53    PC54   PC55    PC56
+    ## Standard deviation     0.96073 0.95386 0.95165 0.94804 0.94618 0.9448 0.94172
+    ## Proportion of Variance 0.01003 0.00989 0.00984 0.00977 0.00973 0.0097 0.00964
+    ## Cumulative Proportion  0.68827 0.69816 0.70800 0.71777 0.72750 0.7372 0.74684
+    ##                           PC57    PC58    PC59    PC60    PC61    PC62    PC63
+    ## Standard deviation     0.93833 0.93373 0.92944 0.92604 0.91900 0.91667 0.91250
+    ## Proportion of Variance 0.00957 0.00948 0.00939 0.00932 0.00918 0.00913 0.00905
+    ## Cumulative Proportion  0.75642 0.76589 0.77528 0.78460 0.79378 0.80292 0.81197
+    ##                           PC64    PC65    PC66    PC67    PC68   PC69    PC70
+    ## Standard deviation     0.90856 0.90713 0.90247 0.89784 0.89163 0.8894 0.88632
+    ## Proportion of Variance 0.00897 0.00894 0.00885 0.00876 0.00864 0.0086 0.00854
+    ## Cumulative Proportion  0.82094 0.82988 0.83874 0.84750 0.85614 0.8647 0.87328
     ##                           PC71    PC72    PC73    PC74    PC75    PC76    PC77
-    ## Standard deviation     0.87943 0.87255 0.86961 0.85892 0.84668 0.84475 0.83494
-    ## Proportion of Variance 0.00841 0.00828 0.00822 0.00802 0.00779 0.00776 0.00758
-    ## Cumulative Proportion  0.88229 0.89056 0.89878 0.90680 0.91459 0.92235 0.92993
-    ##                           PC78    PC79    PC80    PC81   PC82   PC83   PC84
-    ## Standard deviation     0.83180 0.81416 0.80399 0.76539 0.7614 0.7178 0.6982
-    ## Proportion of Variance 0.00752 0.00721 0.00703 0.00637 0.0063 0.0056 0.0053
-    ## Cumulative Proportion  0.93745 0.94465 0.95168 0.95805 0.9644 0.9699 0.9752
-    ##                           PC85    PC86   PC87    PC88    PC89    PC90    PC91
-    ## Standard deviation     0.67305 0.66180 0.6213 0.51713 0.50158 0.48643 0.40432
-    ## Proportion of Variance 0.00492 0.00476 0.0042 0.00291 0.00273 0.00257 0.00178
-    ## Cumulative Proportion  0.98017 0.98493 0.9891 0.99204 0.99477 0.99734 0.99912
+    ## Standard deviation     0.87781 0.87540 0.87030 0.86441 0.85639 0.84684 0.83893
+    ## Proportion of Variance 0.00838 0.00833 0.00823 0.00812 0.00797 0.00779 0.00765
+    ## Cumulative Proportion  0.88165 0.88998 0.89821 0.90634 0.91431 0.92210 0.92975
+    ##                          PC78    PC79    PC80    PC81    PC82    PC83    PC84
+    ## Standard deviation     0.8308 0.81802 0.80676 0.79033 0.77788 0.75341 0.69353
+    ## Proportion of Variance 0.0075 0.00727 0.00707 0.00679 0.00658 0.00617 0.00523
+    ## Cumulative Proportion  0.9373 0.94453 0.95160 0.95839 0.96497 0.97114 0.97637
+    ##                          PC85   PC86   PC87   PC88   PC89    PC90    PC91
+    ## Standard deviation     0.6646 0.6291 0.5832 0.5163 0.4979 0.48669 0.40464
+    ## Proportion of Variance 0.0048 0.0043 0.0037 0.0029 0.0027 0.00257 0.00178
+    ## Cumulative Proportion  0.9812 0.9855 0.9892 0.9921 0.9948 0.99733 0.99911
     ##                           PC92
-    ## Standard deviation     0.28473
-    ## Proportion of Variance 0.00088
+    ## Standard deviation     0.28548
+    ## Proportion of Variance 0.00089
     ## Cumulative Proportion  1.00000
 
 ``` r
@@ -492,7 +510,7 @@ ggbiplot(pca)
 
 With the 92 PCA, the information that we gain is not very useful.
 
-## ROlling Return
+## Cumulative Return
 
 The graph below gives the cumulative returns for all the unique stocks
 in the Top40, with different starting dates. Sinces we are analyzing 92
@@ -518,3 +536,250 @@ gg
 ```
 
 ![](README_files/figure-markdown_github/unnamed-chunk-12-1.png)
+
+# Question 4
+
+Over the past couple of year, the South African ZAR has been more
+volatile when compared to the major currencies. There are many factors
+that affect this volatility. A few of the most prominent include
+political unrest, central banking policies, economic performance and
+outlier events. If any of these underpinnings evolve into a dominant
+market driver, exchange rate volatility facing the ZAR spikes. The
+result is a destabilisation of the rand and turbulence in the forex
+valuations of related pairs.
+
+``` r
+cncy %>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Currency", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+Since the graph above is difficult to read, I have decided to only
+compare the major curries to get a clearer picture. The graph below
+displays the Euro, the Great British Pound, the Australian Dollar, the
+Canadian dollar, the Japanese Yen and the South African Rand.
+
+``` r
+#cncy %>% group_by(Name) %>% pull(Name) %>% unique 
+plota <- cncy %>% filter(Name==c("Australia_Cncy_Inv", "Canada_Cncy", "SouthAfrica_Cncy","UK_Cncy_Inv", "EU_Cncy_Inv", "Japan_Cncy"))%>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    facet_wrap(~Name, scales = "free_y") +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Analzying each currency relative to USD", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+plota
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-14-1.png)
+
+## Implied Volatility
+
+Implied volatility is a measure of the expected risk with regards to the
+underlying for an option. The measure reflects the market’s view on the
+likelihood of movements in prices for the underlying, having the
+tendency to increase when prices decline and thus reflect the riskier
+picture
+
+Implied volatility is commonly used by the market to pre-empt future
+movements of the underlying. High volatility suggests large price
+swings, while muted volatility could mean that price fluctuations may be
+very much contained.
+
+Implied Volatility is important because it not only incorporates
+historical information about asset prices but also market participants’
+expectations, frequently not easily quantifiable, about future events.
+Looking at the implied volatility graph below, it indicates that South
+African Rand experiences much higher volatility compared to other
+currencies. It should be kept in mind that South Africa is an emerging
+market whereas the other countries curries that are being analyzed are
+all developed countries.
+
+``` r
+cncyIV %>% group_by(Name) %>% pull(Name) %>% unique 
+```
+
+    ##  [1] "Australia_IV"   "Brazil_IV"      "Canada_IV"      "Chile_IV"      
+    ##  [5] "China_IV"       "Columbia_IV"    "Czech_IV"       "Denmark_IV"    
+    ##  [9] "EU_IV"          "HongKong_IV"    "Hungary_IV"     "India_IV"      
+    ## [13] "Israel_IV"      "Japan_IV"       "Malaysia_IV"    "Mexico_IV"     
+    ## [17] "Norway_IV"      "NZ_IV"          "Peru_IV"        "Philipines_IV" 
+    ## [21] "Poland_IV"      "Romania_IV"     "Russia_IV"      "Saudi_IV"      
+    ## [25] "Singapore_IV"   "SouthAfrica_IV" "SouthKorea_IV"  "Sweden_IV"     
+    ## [29] "Taiwan_IV"      "Thailand_IV"    "Turkey_IV"      "UK_IV"
+
+``` r
+plotb <- cncyIV %>% filter(Name==c("Australia_IV", "Canada_IV", "SouthAfrica_IV","UK_IV", "EU_IV", "Japan_IV"))%>% group_by(date) %>%
+ggplot() + 
+    geom_line(aes(x=date, y=Price, color=Name)) +
+    theme_bw() +  
+    labs(x = "Dates", y = "Price (relative to USD)", title = "Implied Volatility ", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+```
+
+    ## Warning in Name == c("Australia_IV", "Canada_IV", "SouthAfrica_IV", "UK_IV", :
+    ## longer object length is not a multiple of shorter object length
+
+``` r
+plotb
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-15-1.png)
+
+## Univariate GARCH
+
+The graph below shows the USD/ZAR exchange rate. As you can see, the
+periods of volatility clustering increases with time. The most
+volatility was experiences during the 2008 Global Financial crisis. This
+graph gives a good indication to see where the periods of high and low
+volatility are.
+
+``` r
+plotc <- cncy %>% filter(Name==c("SouthAfrica_Cncy")) %>% group_by(Name) %>%  mutate(dlogprice = log(Price) - log(lag(Price))) %>%
+    filter(date > first(date)) %>%
+    ggplot() +
+    geom_line(aes(x=date,y=dlogprice), color="red") + theme_bw() +  
+    labs(x = "Dates", y = "", title = "USD/ZAR", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
+
+
+plotc
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-16-1.png) In the
+table below, there are a few summary statistics of the garch model.
+
+results =‘asis’
+
+``` r
+data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>% group_by(Name) %>%
+    mutate(dlogprice = log(Price) - log(lag(Price))) %>%
+    filter(date > first(date)) %>%
+    select(date, dlogprice)
+```
+
+    ## Adding missing grouping variables: `Name`
+
+``` r
+garch11 <- 
+  
+  ugarchspec(
+    
+    variance.model = list(model = c("sGARCH","gjrGARCH","eGARCH","fGARCH","apARCH")[1], 
+                          
+    garchOrder = c(1, 1)), 
+    
+    mean.model = list(armaOrder = c(1, 0), include.mean = TRUE), 
+    
+    distribution.model = c("norm", "snorm", "std", "sstd", "ged", "sged", "nig", "ghyp", "jsu")[1])
+
+garchfit1 = ugarchfit(spec = garch11,data = data$dlogprice)
+slotNames(garchfit1)
+```
+
+    ## [1] "fit"   "model"
+
+``` r
+names(garchfit1@fit)
+```
+
+    ##  [1] "hessian"         "cvar"            "var"             "sigma"          
+    ##  [5] "condH"           "z"               "LLH"             "log.likelihoods"
+    ##  [9] "residuals"       "coef"            "robust.cvar"     "A"              
+    ## [13] "B"               "scores"          "se.coef"         "tval"           
+    ## [17] "matcoef"         "robust.se.coef"  "robust.tval"     "robust.matcoef" 
+    ## [21] "fitted.values"   "convergence"     "kappa"           "persistence"    
+    ## [25] "timer"           "ipars"           "solver"
+
+``` r
+names(garchfit1@model)
+```
+
+    ##  [1] "modelinc"   "modeldesc"  "modeldata"  "pars"       "start.pars"
+    ##  [6] "fixed.pars" "maxOrder"   "pos.matrix" "fmodel"     "pidx"      
+    ## [11] "n.start"
+
+``` r
+garchfit1@fit$matcoef 
+```
+
+    ##               Estimate      Std. Error    t value              Pr(>|t|)
+    ## mu     0.0001386750867 0.0000600373844  2.3098123 0.0208985500784439893
+    ## ar1    0.0041760707352 0.0118347453214  0.3528653 0.7241894402706872125
+    ## omega  0.0000003698017 0.0000006192525  0.5971744 0.5503909622348868158
+    ## alpha1 0.1023834014790 0.0142000894601  7.2100533 0.0000000000005593304
+    ## beta1  0.8966165432813 0.0135864231502 65.9935682 0.0000000000000000000
+
+``` r
+Table <- xtable(garchfit1@fit$matcoef)
+
+print(Table, type = "latex", comment = FALSE)
+```
+
+    ## \begin{table}[ht]
+    ## \centering
+    ## \begin{tabular}{rrrrr}
+    ##   \hline
+    ##  &  Estimate &  Std. Error &  t value & Pr($>$$|$t$|$) \\ 
+    ##   \hline
+    ## mu & 0.00 & 0.00 & 2.31 & 0.02 \\ 
+    ##   ar1 & 0.00 & 0.01 & 0.35 & 0.72 \\ 
+    ##   omega & 0.00 & 0.00 & 0.60 & 0.55 \\ 
+    ##   alpha1 & 0.10 & 0.01 & 7.21 & 0.00 \\ 
+    ##   beta1 & 0.90 & 0.01 & 65.99 & 0.00 \\ 
+    ##    \hline
+    ## \end{tabular}
+    ## \end{table}
+
+The Persistence of the garch is 0.998, which is expected as the
+persistence is the alpha and the beta summed together. The news impact
+curve also reflects the volatility asymmetry.
+
+``` r
+ni <- newsimpact(z = NULL, garchfit1)
+plotd <- plot(ni$zx, ni$zy, ylab = ni$yexpr, xlab = ni$xexpr, type = "l", 
+    main = "News Impact Curve")
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-18-1.png)
+
+``` r
+plotd
+```
+
+    ## NULL
+
+## Carry trades
+
+The carry trade strategy has been popular around investors since 1980,
+since on average, the returns are positive. As can be seen in the graph
+below, the Deutsche Bank G10 harvest Index and the South African ZAR
+follow eachother, with the ZAR being slightly more volatile. This means
+that carry trades serve as a good indicater for the USD/ZAR exchange
+rate.
+
+``` r
+carry <- cncy_Carry %>% mutate(carry_c = log(Price) - log(lag(Price))) %>%
+    mutate(scaledret = (carry_c - mean(carry_c, na.rm = T))) %>% 
+filter(date > first(date))  %>%
+    select(date, carry_c)
+   
+
+data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>%
+    mutate(SA_ZAR = log(Price) - log(lag(Price))) %>%
+    mutate(scaledprice = (SA_ZAR - mean(SA_ZAR, na.rm = T))) %>%
+    filter(date > first(date)) %>%
+     filter(date >= lubridate::ymd(20000919)) %>%
+    select(date, SA_ZAR)
+
+
+plotg <- left_join(carry, data, by= "date") %>% gather(Name, price, -date) %>% ggplot() + geom_line(aes(x=date,y=price, color=Name)) +
+     theme_bw() +  
+    labs(x = "Dates", y = "log returns", title = "South African ZAR vs Currency Carry", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currencies"))
+
+plotg
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)

@@ -19,10 +19,6 @@ library(rportfolios)
 library(PerformanceAnalytics)
 library(devtools)
 library(rmsfuns)
-if (!require(FactoMineR)) install.packages("FactoMineR")
-if (!require(factoextra)) install.packages("factoextra")
-library(factoextra)
-library(FactoMineR)
 pacman::p_install_gh("Nicktz/fmxdat")
 pacman::p_load(fEcofin)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
@@ -137,7 +133,7 @@ a
 
 
 ```{r}
-fviz_screeplot(pca, ncp = 10)
+plot(pca, type = "l")
 ```
 
 
@@ -153,7 +149,8 @@ With the 92 PCA, the information that we gain is not very useful.
 
 ## ROlling Return 
 
-The graph below gives the cumulative returns for all the unique stocks in the Top40, with different starting dates. Sinces we are analyzing 92 different stocks, the graph is still not clear as to which stocks contribute the most to the top40 portfolio. 
+The graph below gives the cumulative returns for all the unique stocks in the Top40, with different starting dates. 
+
 ```{r}
 
 
@@ -175,4 +172,40 @@ gg
 
 ```
 
+
+```{r}
+library(Rcpp)
+
+plotdf <- 
+read_rds("data/T40.rds")%>%
+    select(date, Tickers, Return, J200) %>%
+    mutate(Return = Return*J200) %>%
+    select(date, Tickers, Return) %>% 
+    arrange(date) %>%
+    group_by(Tickers) %>%
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>%
+# Epic sorcery:
+mutate(RollRets = RcppRoll::roll_prod(1 + Return, 36, fill = NA, 
+    align = "right")^(12/36) - 1) %>% 
+# Note this cool trick: it removes dates that have no
+# RollRets at all.
+
+group_by(date) %>% filter(any(!is.na(RollRets))) %>% 
+ungroup()
+
+g <- 
+plotdf %>% 
+ggplot() + 
+geom_line(aes(date, RollRets, color = Tickers), alpha = 0.7, 
+    size = 1.25) + 
+labs(title = "Illustration of Rolling 3 Year Annualized Returns of various Indices with differing start dates", 
+    subtitle = "", x = "", y = "Rolling 3 year Returns (Ann.)", 
+    caption = "Note:\nDistortions are not evident now.") + theme_fmx(title.size = ggpts(30), 
+    subtitle.size = ggpts(5), caption.size = ggpts(25), CustomCaption = T) + 
+    
+fmx_cols()
+
+finplot(g, x.date.dist = "1 year", x.date.type = "%Y", x.vert = T, 
+    y.pct = T, y.pct_acc = 1)
+```
 
