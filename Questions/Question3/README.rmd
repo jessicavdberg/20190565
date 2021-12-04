@@ -4,21 +4,146 @@ output:
     variant: markdown_github
 ---
 
-# Purpose
+# Question 3
 
-Purpose of this work folder.
-
-Ideally store a minimum working example data set in data folder.
-
-Add binary files in bin, and closed R functions in code. Human Readable settings files (e.g. csv) should be placed in settings/
+With the code, I can confirm that there are 92 PCA. This number is a large, however, there are 92 unique tickets in the Top40.This is because every year, some stocks get dropped form the Top40, while others get added. Each of the 92 components explains a percentage of the total variation in the T40 returns. That is, PC1 explains 8 % of the total variance, which is the most out of the 92 PCA's. PC50 to PC92 all explain less than 1 percent of the total variance. The table below plots the individuals components importance. 
 
 
 ```{r}
 
 rm(list = ls()) # Clean your environment:
-gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+gc() 
 library(tidyverse)
+library(dplyr)
+library(rportfolios)
+library(PerformanceAnalytics)
+library(devtools)
+library(rmsfuns)
+pacman::p_install_gh("Nicktz/fmxdat")
+pacman::p_load(fEcofin)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
 ```
 
+
+
+```{r}
+#Calculating returns
+T40 <- read_rds("data/T40.rds")
+
+T40[sapply(T40, is.infinite)] <- NA
+T40[T40 == 0] <- NA
+    
+T40 <- read_rds("data/T40.rds") %>% na.locf(.,na.rm=T, 5) %>%
+    select(date, Tickers, Return, J200) %>%
+    mutate(Return = Return*J200) %>%
+    select(date, Tickers, Return) %>% 
+    group_by(Tickers) %>%
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers))
+
+return_mat <- T40 %>% spread(Tickers,Return) 
+colSums(is.na(T40))
+
+impute_missing_returns <- function(return_mat, impute_returns_method = "NONE", Seed = 1234){
+  # Make sure we have a date column called date:
+  if( !"date" %in% colnames(return_mat) ) stop("No 'date' column provided in return_mat. Try again please.")
+
+  # Note my use of 'any' below...
+  # Also note that I 'return' return_mat - which stops the function and returns return_mat. 
+  if( impute_returns_method %in% c("NONE", "None", "none") ) {
+    if( any(is.na(return_mat)) ) warning("There are missing values in the return matrix.. Consider maybe using impute_returns_method = 'Drawn_Distribution_Own' / 'Drawn_Distribution_Collective'")
+    return(return_mat)
+  }
+
+  
+  if( impute_returns_method  == "Average") {
+
+    return_mat <-
+      return_mat %>% gather(Stocks, Returns, -date) %>%
+      group_by(date) %>%
+      mutate(Avg = mean(Returns, na.rm=T)) %>%
+      mutate(Avg = coalesce(Avg, 0)) %>% # date with no returns - set avg to zero
+      ungroup() %>%
+      mutate(Returns = coalesce(Returns, Avg)) %>% select(-Avg) %>% spread(Stocks, Returns)
+
+    # That is just so much easier when tidy right? See how I gathered and spread again to give back a wide df?
+    
+  } else
+
+    if( impute_returns_method  == "Drawn_Distribution_Own") {
+
+      set.seed(Seed)
+      N <- nrow(return_mat)
+      return_mat <-
+
+        left_join(return_mat %>% gather(Stocks, Returns, -date),
+                  return_mat %>% gather(Stocks, Returns, -date) %>% group_by(Stocks) %>%
+                    do(Dens = density(.$Returns, na.rm=T)) %>%
+                    ungroup() %>% group_by(Stocks) %>% # done to avoid warning.
+                    do(Random_Draws = sample(.$Dens[[1]]$x, N, replace = TRUE, prob=.$Dens[[1]]$y)),
+                  by = "Stocks"
+        ) %>%  group_by(Stocks) %>% mutate(Row = row_number()) %>% mutate(Returns = coalesce(Returns, Random_Draws[[1]][Row])) %>%
+        select(-Random_Draws, -Row) %>% ungroup() %>% spread(Stocks, Returns)
+
+    } else
+
+      if( impute_returns_method  == "Drawn_Distribution_Collective") {
+
+        set.seed(Seed)
+        NAll <- nrow(return_mat %>% gather(Stocks, Returns, -date))
+
+        return_mat <-
+          bind_cols(
+          return_mat %>% gather(Stocks, Returns, -date),
+          return_mat %>% gather(Stocks, Returns, -date) %>%
+            do(Dens = density(.$Returns, na.rm=T)) %>%
+            do(Random_Draws = sample(.$Dens[[1]]$x, NAll, replace = TRUE, prob=.$Dens[[1]]$y)) %>% unnest(Random_Draws)
+          ) %>%
+          mutate(Returns = coalesce(Returns, Random_Draws)) %>% select(-Random_Draws) %>% spread(Stocks, Returns)
+
+      } else
+
+        if( impute_returns_method  == "Zero") {
+        warning("This is probably not the best idea but who am I to judge....")
+          return_mat[is.na(return_mat)] <- 0
+
+        } else
+          stop("Please provide a valid impute_returns_method method. Options include:\n'Average', 'Drawn_Distribution_Own', 'Drawn_Distribution_Collective' and 'Zero'.")
+}
+
+
+options(scipen = 999) # Stop the scientific notation of
+
+return_mat <- impute_missing_returns(return_mat, impute_returns_method = "Drawn_Distribution_Collective", Seed = as.numeric(format( Sys.time(), "%Y%d%H%M")))
+
+return_mat_Nodate <- data.matrix(return_mat[, -1])
+
+# Simple Sample covariance and mean:
+Sigma <- RiskPortfolios::covEstimation(return_mat_Nodate)
+Mu <- RiskPortfolios::meanEstimation(return_mat_Nodate)
+
+#PCA calculations
+pca <- prcomp(return_mat_Nodate,center=TRUE, scale.=TRUE)
+d <- str(pca)
+c <- pca$sdev #extracting standard deviation.
+eigenvalues <- pca$sdev^2
+b<- pca$rotation
+a <- summary(pca)
+a
+```
+
+
+```{r}
+plot(pca, type = "l")
+```
+
+
+As can be seen in the plot below, there is not one variable that makes a significant contribution to the variance. Therefore, you will need to consider all variables of the Top40 to understand how the variance is affected. This graph is not very informative as we don't know which graph belongs to which Ticker. However, adding in rownames makes the plot very messy. 
+```{r}
+install_github("vqv/ggbiplot")
+library(ggbiplot)
+ggbiplot(pca)
+
+```
+
+With the 92 PCA, the information that we gain is not very useful. 
 

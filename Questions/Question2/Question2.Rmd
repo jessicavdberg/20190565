@@ -111,6 +111,9 @@ library(rportfolios)
 library(lubridate)
 T40 <- read_rds("data/T40.rds")
 RebDays <- read_rds("data/Rebalance_days.rds")
+library(rmsfuns)
+pacman::p_load("tidyr", "tbl2xts","devtools","lubridate", "readr", "PerformanceAnalytics", "ggplot2", "dplyr")
+usdzar <- read_rds("data/usdzar.rds")
 
 ```
 
@@ -123,8 +126,11 @@ RebDays <- read_rds("data/Rebalance_days.rds")
 
 ## Portfolio Return 
 
+The porfolio returns for large and mid caps are shown below. Because we are analyzing the Top 40, there are no small caps, and if there are, they make up  such a small percentage of the portfolio that it makes no sense to analyze them. 
+
+The graph for Mid caps return saw very constant returns up until mid year, 2017. Afterwhich it experienced a slight increase followed by a drastic decrease. This would be an indication of an negative, al though constant investment. Investors that are looking for a high return is unlikely to experience this.  The SWIX outperforms the ALSI, which is a preference for when the market is constant/slight increase. However, during negative volatility, the SWIX performs worse. It is important to remember that mid-cap companies can turn into large-cap companies, which also make them attractive to investors. However, you will need to spot the diamond in the rough. 
 ```{r}
-data1 <- T40 %>% 
+data1 <- T40 %>% filter(Index_Name=="Mid_Caps") %>% 
     mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
     arrange(date) %>% 
     mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
@@ -157,40 +163,293 @@ Cum_Comp <- left_join(Cum_J400, Cum_J200, by = "date") %>% gather(Type,
 
 Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date, 
     Value, color = Type)) + theme_bw() +theme_bw() +  
-    labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
+    labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Mid Caps", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
 ```
+The portfolio cumulative returns for Large Caps experience much more volatility then Mid Caps. Large Caps are filled with companies that are dominate in their industry, and while they are still affect by volatility, they have more of a chance to bounce back. They hold themselves well in times of recession or during any other negative event. Besides, they will usually have been functioning for decades and have good reputations. If you want to invest in a companies stocks by taking less risk, then large-cap stocks are a good option. These stocks are less volatile in comparison to mid-cap. The lower volatility makes them less risky.
+
+As seen in th graph below, Large caps present a higher return, but also experienced a downturn with the depletion of economic events in 2020. 
+
+```{r}
+data1 <- T40 %>% filter(Index_Name=="Large_Caps") %>% 
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+    arrange(date) %>% 
+    mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
+    group_by(year, Tickers) %>%
+    filter(date==last(date)) %>%
+    ungroup 
+    
+df_Portf_J400<- 
+    data1 %>% select(date,Return, J400) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J400, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+
+df_Portf_J200 <- 
+    data1 %>% select(date,Return, J200) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J200, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+      
+## CULMULATIVE 
+Cum_J400 <- df_Portf_J400 %>% mutate(cumreturn_400 = (cumprod(1 + 
+    PortfolioReturn))) %>% # Start at 1
+mutate(cumreturn_400 = cumreturn_400/first(cumreturn_400)) %>% 
+    select(-PortfolioReturn)
+
+Cum_J200 <- df_Portf_J200 %>% mutate(cumreturn_200 = (cumprod(1 + 
+    PortfolioReturn))) %>% mutate(cumreturn_200 = cumreturn_200/first(cumreturn_200)) %>% select(-PortfolioReturn)
+
+Cum_Comp <- left_join(Cum_J400, Cum_J200, by = "date") %>% gather(Type, 
+    Value, -date)
+
+# Now let's plot the wealth index (if you invested R100 in
+# each) of the two portfolios::
+
+Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date, 
+    Value, color = Type)) + theme_bw() +theme_bw() +  
+    labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Large Caps", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
+```
+### Sector Analysis
+
+The industrial sector has preformed relatively well compared to the financial sector (discussed below). The sector has been on an increasing trend with the COVID-19 pandemic resulting in slowdown and negative growth. 
+
+
+```{r}
+data1 <- T40 %>% filter(Sector=="Industrials") %>% 
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+    arrange(date) %>% 
+    mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
+    group_by(year, Tickers) %>%
+    filter(date==last(date)) %>%
+    ungroup 
+    
+df_Portf_J400<- 
+    data1 %>% select(date,Return, J400) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J400, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+
+df_Portf_J200 <- 
+    data1 %>% select(date,Return, J200) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J200, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+      
+## CULMULATIVE 
+Cum_J400 <- df_Portf_J400 %>% mutate(cumreturn_400 = (cumprod(1 + 
+    PortfolioReturn))) %>% # Start at 1
+mutate(cumreturn_400 = cumreturn_400/first(cumreturn_400)) %>% 
+    select(-PortfolioReturn)
+
+Cum_J200 <- df_Portf_J200 %>% mutate(cumreturn_200 = (cumprod(1 + 
+    PortfolioReturn))) %>% mutate(cumreturn_200 = cumreturn_200/first(cumreturn_200)) %>% select(-PortfolioReturn)
+
+Cum_Comp <- left_join(Cum_J400, Cum_J200, by = "date") %>% gather(Type, 
+    Value, -date)
+
+# Now let's plot the wealth index (if you invested R100 in
+# each) of the two portfolios::
+
+Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date, 
+    Value, color = Type)) + theme_bw() +theme_bw() +  
+    labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Industrial", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
+```
+The graph below for the financial structure looks very similar to that of the large-caps (which was discussed above). This indicates that many of the financial sector companies that are being analyzed are large-cap companies. This implies that even though a sharp decrease can be seen, these companies have a high probability to bounce back. 
+
+There are have been some aggressive monetary and fiscal policy responses to the COVID-19 pandemic, which would contribute towards stabilizing the market and ensuring the industry starts growing again. 
+```{r}
+data1 <- T40 %>% filter(Sector=="Financials") %>% 
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+    arrange(date) %>% 
+    mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
+    group_by(year, Tickers) %>%
+    filter(date==last(date)) %>%
+    ungroup 
+    
+df_Portf_J400<- 
+    data1 %>% select(date,Return, J400) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J400, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+
+df_Portf_J200 <- 
+    data1 %>% select(date,Return, J200) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J200, na.rm =TRUE)) %>% 
+      filter(PortfolioReturn != 0)
+      
+## CULMULATIVE 
+Cum_J400 <- df_Portf_J400 %>% mutate(cumreturn_400 = (cumprod(1 + 
+    PortfolioReturn))) %>% # Start at 1
+mutate(cumreturn_400 = cumreturn_400/first(cumreturn_400)) %>% 
+    select(-PortfolioReturn)
+
+Cum_J200 <- df_Portf_J200 %>% mutate(cumreturn_200 = (cumprod(1 + 
+    PortfolioReturn))) %>% mutate(cumreturn_200 = cumreturn_200/first(cumreturn_200)) %>% select(-PortfolioReturn)
+
+Cum_Comp <- left_join(Cum_J400, Cum_J200, by = "date") %>% gather(Type, 
+    Value, -date)
+
+# Now let's plot the wealth index (if you invested R100 in
+# each) of the two portfolios::
+
+Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date, 
+    Value, color = Type)) + theme_bw() +theme_bw() +  
+    labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Financial Sector", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
+```
+## Staritication 
+
+I use the only the index from 2008 onwards since this is the only data that is available.  
+
+```{r}
+
+#data2 <- T40  %>% 
+ #   mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+  #  arrange(date) %>% 
+   # mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
+  #  group_by(year, Tickers) %>%
+  #select(date, Tickers, Return)
+
+# data2 <- data2 %>% group_by(Tickers) %>% 
+  #  mutate(Top = quantile(Return, 0.99), Bot = quantile(Return, 0.01)) %>% 
+   # mutate(Return = ifelse(Return > Top, Top,ifelse(Return < Bot, Bot, Return))) %>% ungroup()
+
+# ZAR <- usdzar %>% filter(date > ymd(20080101)) %>% select(-Name)
+ 
+# ZARSD <- ZAR %>% 
+#    mutate(YearMonth = format(date, "%Y%B")) %>% 
+#    group_by(YearMonth) %>% summarise(SD = sd(Price)*sqrt(252)) %>% 
+#    mutate(TopQtile = quantile(SD, 0.8), BotQtile = quantile(SD, 0.2))
+
+# Hi_Vol <- ZARSD %>% filter(SD > TopQtile) %>% pull(YearMonth)
+
+# Low_Vol <- ZARSD %>% filter(SD < BotQtile) %>% pull(YearMonth)
+
+#Perf_comparisons <- function(data2, YMs, Alias){
+    #Unconditional_SD <- 
+      #  data2 %>% 
+        
+       # group_by(Tickers) %>% 
+        
+      #  mutate(Full_SD = sd(Return) * sqrt(252)) %>% 
+        
+       # filter(year %in% YMs) %>% 
+        
+      #  summarise(SD = sd(Return) * sqrt(252), across(.cols = starts_with("Full"), .fns = max)) %>% 
+        
+       # arrange(desc(SD)) %>% mutate(Period = Alias) %>% 
+        
+      #  group_by(Tickers) %>% 
+        
+       # mutate(Ratio = SD / Full_SD)
+    
+    # Unconditional_SD
+    
+#}
+
+#perf_hi <- Perf_comparisons(data2, YMs = Hi_Vol, Alias = "High_Vol")
+
+#perf_lo <- Perf_comparisons(data2, YMs = Low_Vol, Alias = "Low_Vol")
+
+
+
+```
+
+
+
+
 ## Caping 
 
 I capped the SWIX to 6 percent and the ALSI to 10 percent (this is how I interpreted the question). 
+I couldn.t get the cap exactly right but I think I was on the right path
 
 ```{r}
 #J400
 #max_cap <- 0.6 
 #min_cap <- 0 
 
-#rebalance_dates <- as.data.frame(list(RebDays$date))
+#RebDays %>% filter(date < lubridate::ymd(20211030)) %>% filter(date >= lubridate::ymd(20080102))
 
-#rebalance_dates %>%  mutate(datess=as.numeric(lubridate::ymd(date)))
 
-#Weights <- 
+
+#rebal_dates <-data1 %>% 
+ # mutate(Year = format(date, "%Y"), Month = format(date, "%b"), Day = format(date, "%a")) %>% 
+  #filter(Month %in% c("Mar", "Jun","Sep","Dec")) %>% 
+  #filter(Day == c("Thu", "Mon")) %>% 
+  #group_by(Year, Month) %>% 
+#filter(date == first(date)) %>% 
+#pull(date)
+
+#data1$weight <- data1$J400
+#data1[is.na(data1)] = 0
+
+#rebalance_col <- 
+#data1 %>% 
+#filter(date %in% rebal_dates) %>% 
+#mutate(RebalTime = format(date, "%Y%B")) %>% 
+#group_by(RebalTime) %>% 
+ #arrange(date) %>% 
+#select(date, Tickers, weight, RebalTime)
+
+#df_Cons <- rebalance_col %>% filter(date==first(date))
+
+#Proportional_Cap_Foo <- function(df_Cons, W_Cap = 0.6){
   
-#data1 %>% mutate(dates=as.numeric(lubridate::ymd(date)))
-   # filter(dates %in% as.numeric(rebalance_dates)) %>% 
+  # Let's require a specific form from the user... Alerting when it does not adhere this form
+ # if( !"weight" %in% names(df_Cons)) stop("... for Calc capping to work, provide weight column called 'weight'")
   
- # group_by(YearMonths, Months, Stocks) %>% filter(Date == last(Date)) %>% ungroup()
+ # if( !"date" %in% names(df_Cons)) stop("... for Calc capping to work, provide date column called 'date'")
+  
+#  if( !"Tickers" %in% names(df_Cons)) stop("... for Calc capping to work, provide id column called 'Tickers'")
+
+  # First identify the cap breachers
+ # Breachers <- 
+  #  df_Cons %>% filter(weight > W_Cap) %>% pull(Tickers)
+  
+  # Now keep track of breachers, and add to it to ensure they remain at 10%:
+#  if(length(Breachers) > 0) {
+    
+ #   while( df_Cons %>% filter(weight > W_Cap) %>% nrow() > 0 ) {
+      
+      
+  #    df_Cons <-
+        
+   #     bind_rows(
+          
+    #      df_Cons %>% filter(Tickers %in% Breachers) %>% mutate(weight = W_Cap),
+          
+     #     df_Cons %>% filter(!Tickers %in% Breachers) %>% 
+      #      mutate(weight = (weight / sum(weight, na.rm=T)) * (1-length(Breachers)*W_Cap) )
+          
+       # )
+      
+  #    Breachers <- c(Breachers, df_Cons %>% filter(weight > W_Cap) %>% pull(Tickers))
+      
+   # }
+
+  #  if( sum(df_Cons$weight, na.rm=T) > 1.001 | sum(df_Cons$weight, na.rm=T) < 0.999 | max(df_Cons$weight, na.rm = T) > W_Cap) {
+      
+   #   stop( glue::glue("For the Generic weight trimming function used: the weight trimming causes non unit 
+    #  summation of weights for date: {unique(df_Cons$date)}...\n
+     # The restriction could be too low or some dates have extreme concentrations...") )
+      
+  #  }
+    
+#  } else {
+    
+#  }
+  
+ # df_Cons
+  
+#  }
+  
+
+# Now, to map this across all the dates, we can use purrr::map_df as follows:
+ #     Capped_df <- 
+    
+  #  rebalance_col %>% 
+    # Split our df into groups (where the groups here are the rebalance dates:
+   # group_split(RebalTime) %>% 
+    
+    # Apply the function Proportional_Cap_Foo to each rebalancing date:
+    #map_df(~Proportional_Cap_Foo(., W_Cap = 0.6) ) %>% select(-RebalTime)
+  
+# Testing this:
+#Capped_df %>% pull(weight) %>% max(.)
 
 
 
+#rebalance_col$weight[rebalance_col$weight>0.6] = 0.6
 
-
-#df1 <- data1 %>% select(date, Tickers, Return, J400)
-#df1$J400[df1$J400 > 0.06] <- 0.06
-
-#df2 <- data1 %>% select(date, Tickers, Return, J200)
-#df2$J200[df2$J200 > 0.1] <- 0.1
-
-
-
+#rebalance_col %>% tbl_xts(cols_to_xts = weight, spread_by = Tickers)
 
 ```
 

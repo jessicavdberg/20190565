@@ -1,0 +1,5 @@
+Definition of commodities:
+
+
+
+We use the Bloomberg Commodity Index (Bcom_Index) - which is a combination of several different commidity indexes - and can be used as a proxy for commodity prices broadly.

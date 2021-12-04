@@ -1,0 +1,3 @@
+Definition of CESIUSD:
+
+US Citi Econ Surprize Index: measures the degree to which economic data is either beating or missing expectations (above zero - beating estimates, i.e. better than expectation).
