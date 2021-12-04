@@ -19,6 +19,10 @@ library(rportfolios)
 library(PerformanceAnalytics)
 library(devtools)
 library(rmsfuns)
+if (!require(FactoMineR)) install.packages("FactoMineR")
+if (!require(factoextra)) install.packages("factoextra")
+library(factoextra)
+library(FactoMineR)
 pacman::p_install_gh("Nicktz/fmxdat")
 pacman::p_load(fEcofin)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
@@ -133,7 +137,7 @@ a
 
 
 ```{r}
-plot(pca, type = "l")
+fviz_screeplot(pca, ncp = 10)
 ```
 
 
@@ -146,4 +150,29 @@ ggbiplot(pca)
 ```
 
 With the 92 PCA, the information that we gain is not very useful. 
+
+## ROlling Return 
+
+The graph below gives the cumulative returns for all the unique stocks in the Top40, with different starting dates. Sinces we are analyzing 92 different stocks, the graph is still not clear as to which stocks contribute the most to the top40 portfolio. 
+```{r}
+
+
+gg <-  read_rds("data/T40.rds")%>%
+    select(date, Tickers, Return, J200) %>%
+    mutate(Return = Return*J200) %>%
+    select(date, Tickers, Return) %>% 
+    arrange(date) %>%
+    group_by(Tickers) %>%
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+        mutate(Rets = coalesce(Return, 0)) %>%  
+        mutate(CP = cumprod(1 + Rets)) %>% 
+        ungroup() %>% ggplot() + 
+geom_line(aes(date, CP, color = Tickers)) + 
+labs(title = "Cumulative Returns of various Indices", 
+    subtitle = "", caption = "Note:\nDistortions emerge as starting dates differ.")
+# Level plot
+gg
+
+```
+
 
