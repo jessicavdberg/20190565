@@ -21,9 +21,10 @@ list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.
 # All programs and data used 
 
 pacman::p_install_gh("Nicktz/fmxdat")
+pacman::p_load(tbl2xts, PerformanceAnalytics)
 library(tidyverse)
 library(dplyr)
-library(tbl2xts)
+library(rportfolios)
 library(PerformanceAnalytics)
 SA_bonds <- read_rds("data/SA_Bonds.rds")
 BE_Infl <- read_rds("data/BE_Infl.rds")
@@ -32,6 +33,8 @@ bonds_10y <- read_rds("data/bonds_10y.rds")
 usdzar <- read_rds("data/usdzar.rds")
 ZA_Infl <- read_rds("data/ZA_Infl.rds")
 IV <- read_rds("data/IV.rds")
+T40 <- read_rds("data/T40.rds")
+RebDays <- read_rds("data/Rebalance_days.rds")
 ```
 
 
