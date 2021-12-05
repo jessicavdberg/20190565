@@ -23,20 +23,17 @@ knitr::opts_knit$set(root.dir= normalizePath('..'))
 knitr::opts_chunk$set(error = FALSE)
 
 pacman::p_install_gh("Nicktz/fmxdat")
-pacman::p_load(tbl2xts, PerformanceAnalytics, xtable)
-library(tidyverse)
+pacman::p_load(xtable)
 library(dplyr)
 library(rportfolios)
 library(PerformanceAnalytics)
 library(rmsfuns)
 library(devtools)
-library(rugarch)
-library(lubridate)
 if (!require(FactoMineR)) install.packages("FactoMineR")
 if (!require(factoextra)) install.packages("factoextra")
 library(factoextra)
 library(FactoMineR)
-pacman::p_load("tidyr", "tbl2xts","devtools","lubridate", "readr", "PerformanceAnalytics", "ggplot2", "dplyr")
+pacman::p_load("tidyr","lubridate", "readr", "PerformanceAnalytics", "ggplot2")
 SA_bonds <- read_rds("data/SA_Bonds.rds")
 BE_Infl <- read_rds("data/BE_Infl.rds")
 bonds_2y <- read_rds("data/bonds_2y.rds")
@@ -59,8 +56,10 @@ bonds <- read_rds("data/bonds_10y.rds")
 comms <- read_rds("data/comms.rds")
 pacman::p_load("MTS", "robustbase")
 pacman::p_load("tidyverse", "devtools", "rugarch", "rmgarch", 
-    "forecast", "tbl2xts", "lubridate", "PerformanceAnalytics", 
+    "forecast", "tbl2xts", "lubridate", 
     "ggthemes")
+install_github("vqv/ggbiplot")
+library(ggbiplot)
 ```
 
 
@@ -168,20 +167,19 @@ left_join(ZA_Infl %>%  filter(date >= lubridate::ymd(19991206)) %>% select(-Name
 
 # Question 2 
 
-# Caparing SWIX and ALSI
-
 ## Portfolio Return 
 
 The porfolio returns for large and mid caps are shown below. Because we are analyzing the Top 40, there are no small caps, and if there are, they make up  such a small percentage of the portfolio that it makes no sense to analyze them. 
 
 The graph for Mid caps return saw very constant returns up until mid year, 2017. Afterwhich it experienced a slight increase followed by a drastic decrease. This would be an indication of an negative, al though constant investment. Investors that are looking for a high return is unlikely to experience this.  The SWIX outperforms the ALSI, which is a preference for when the market is constant/slight increase. However, during negative volatility, the SWIX performs worse. It is important to remember that mid-cap companies can turn into large-cap companies, which also make them attractive to investors. However, you will need to spot the diamond in the rough. 
 ```{r}
-data1 <- T40 %>% filter(Index_Name=="Mid_Caps") %>% 
+data1 <- read_rds("data/T40.rds") %>% filter(Index_Name=="Mid_Caps") %>% 
     mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
     arrange(date) %>% 
     mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
     group_by(year, Tickers) %>%
-    filter(date==last(date))
+    filter(date==last(date)) %>%
+    ungroup 
     
 df_Portf_J400<- 
     data1 %>% select(date,Return, J400) %>% group_by(date) %>% summarise(PortfolioReturn = sum(Return*J400, na.rm =TRUE)) %>% 
@@ -485,17 +483,18 @@ I couldn.t get the cap exactly right but I think I was on the right path, theref
 #rebalance_col %>% tbl_xts(cols_to_xts = weight, spread_by = Tickers)
 
 ```
+
+
 # Question 3
 
 With the code, I can confirm that there are 92 PCA. This number is a large, however, there are 92 unique tickets in the Top40.This is because every year, some stocks get dropped form the Top40, while others get added. Each of the 92 components explains a percentage of the total variation in the T40 returns. That is, PC1 explains 8 % of the total variance, which is the most out of the 92 PCA's. PC50 to PC92 all explain less than 1 percent of the total variance. The table below plots the individuals components importance. 
 ```{r}
 #Calculating returns
-T40 <- read_rds("data/T40.rds")
 
 T40[sapply(T40, is.infinite)] <- NA
 T40[T40 == 0] <- NA
     
-T40 <- read_rds("data/T40.rds") %>% na.locf(.,na.rm=T, 5) %>%
+T40 <- T40 %>% na.locf(.,na.rm=T, 5) %>%
     select(date, Tickers, Return, J200) %>%
     mutate(Return = Return*J200) %>%
     select(date, Tickers, Return) %>% 
@@ -601,8 +600,7 @@ fviz_screeplot(pca, ncp = 10)
 
 As can be seen in the plot below, there is not one variable that makes a significant contribution to the variance. Therefore, you will need to consider all variables of the Top40 to understand how the variance is affected. This graph is not very informative as we don't know which graph belongs to which Ticker. However, adding in rownames makes the plot very messy. 
 ```{r}
-install_github("vqv/ggbiplot")
-library(ggbiplot)
+
 ggbiplot(pca)
 
 ```
@@ -614,8 +612,7 @@ With the 92 PCA, the information that we gain is not very useful.
 The graph below gives the cumulative returns for all the unique stocks in the Top40, with different starting dates. Sinces we are analyzing 92 different stocks, the graph is still not clear as to which stocks contribute the most to the top40 portfolio. 
 ```{r}
 
-
-gg <-  read_rds("data/T40.rds")%>%
+gg <-  T40 %>%
     select(date, Tickers, Return, J200) %>%
     mutate(Return = Return*J200) %>%
     select(date, Tickers, Return) %>% 
