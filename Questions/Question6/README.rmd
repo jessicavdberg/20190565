@@ -8,6 +8,12 @@ output:
 
 
 ```{r}
+library(tidyverse)
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+
+```{r}
 
 rm(list = ls()) # Clean your environment:
 gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
@@ -17,10 +23,78 @@ list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.
 
 
 ```{r}
+library(PortfolioAnalytics)
+install.packages("PortfolioAnalytics")
 MAA <- read_rds("data/MAA.rds")
-msci <- read_rds("data/msci.rds") %>%
-filter(Name %in% c("MSCI_ACWI", "MSCI_USA", "MSCI_RE", "MSCI_Jap"))
-MAA
+msci <- read_rds("data/msci.rds")
+
+index <- MAA %>% select(-Name) %>%
+    spread(Ticker, Price) 
+
+
+# Create the portfolio specification
+port_spec <- portfolio.spec(colnames(index))
+
+# Add a full investment constraint such that the weights sum to 1
+port_spec <- add.constraint(portfolio =port_spec, type = "full_investment")
+
+# Add a long only constraint such that the weight of an asset is between 0 and 1
+port_spec <- add.constraint(portfolio = port_spec, type = "long_only")
+
+# Add an objective to minimize portfolio standard deviation
+port_spec <- add.objective(portfolio = port_spec, type = "risk", name = "StdDev")
+
+# Solve the optimization problem
+opt <- optimize.portfolio(index, portfolio = port_spec, optimize_method = "ROI")
+
+print(opt)
+extractWeights(opt)
+chart.Weights(opt)
+
+#Maximize quadratic utility function 
+# Create the portfolio specification
+port_spec <- portfolio.spec(assets = colnames(index))
+
+# Add a full investment constraint such that the weights sum to 1
+port_spec <- add.constraint(portfolio = port_spec, type = "full_investment")
+
+# Add a long only constraint such that the weight of an asset is between 0 and 1
+port_spec <- add.constraint(portfolio = port_spec, type = "long_only")
+
+# Add an objective to maximize portfolio mean return
+port_spec <- add.objective(portfolio = port_spec, type = "return", name = "mean")
+
+# Add an objective to minimize portfolio variance
+port_spec <- add.objective(portfolio = port_spec, type = "risk", name = "var", risk_aversion = 10)
+
+# Solve the optimization problem
+opt <- optimize.portfolio(R = index, portfolio = port_spec, optimize_method = "ROI")
+
+#Creating Portfolio Specitication 
+equities <- msci %>% spread(Name, Price) %>% select(-c("date","MSCI_RE", "MSCI_USREIT"))
+eq_names <- colnames(equities)
+# Create a portfolio specification object using equities_names
+port_spec <- portfolio.spec(equity = eq_names)
+class(port_spec)
+print(port_spec)
+
+
+
+equal_weights <- rep(1 / ncol(index), ncol(index))
+r_benchmark <- Return.portfolio(R = equities, weights = equal_weights, rebalance_on = "quarters")
+colnames(r_benchmark) <- "benchmark"
+
+```
+```{r}
+# Adding Constraints 
+
+# Add the weight sum constraint
+port_spec <- add.constraint(portfolio = port_spec, type = "weight_sum", min_sum = 1, max_sum = 1)
+
+# Add the box constraint
+port_spec <- add.constraint(portfolio = port_spec, type = "box", min = 0, max = 0.4)
+
+print(port_spec)
 
 ```
 
