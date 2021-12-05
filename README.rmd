@@ -1,19 +1,20 @@
-
 ---
-
   output:
   md_document:
     variant: markdown_github
-    
 ---
 
 # Purpose
 
+
+
 The purpose of this README is to give the solutions to the Financial Econometrics 2021 exam written on 04 December 2021. There are also separate Texevier folders for each questions. 
 
 ```{r}
+
 rm(list = ls()) # Clean your environment:
 gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+
 library(tidyverse)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
 
@@ -173,7 +174,7 @@ The porfolio returns for large and mid caps are shown below. Because we are anal
 
 The graph for Mid caps return saw very constant returns up until mid year, 2017. Afterwhich it experienced a slight increase followed by a drastic decrease. This would be an indication of an negative, al though constant investment. Investors that are looking for a high return is unlikely to experience this.  The SWIX outperforms the ALSI, which is a preference for when the market is constant/slight increase. However, during negative volatility, the SWIX performs worse. It is important to remember that mid-cap companies can turn into large-cap companies, which also make them attractive to investors. However, you will need to spot the diamond in the rough. 
 ```{r}
-data1 <- read_rds("data/T40.rds") %>% filter(Index_Name=="Mid_Caps") %>% 
+data1 <- T40 %>% filter(Index_Name=="Mid_Caps") %>% 
     mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
     arrange(date) %>% 
     mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
