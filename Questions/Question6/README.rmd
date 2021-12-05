@@ -31,6 +31,8 @@ msci <- read_rds("data/msci.rds")
 index <- MAA %>% select(-Name) %>%
     spread(Ticker, Price) 
 
+msic_sp <- msci %>% spread(Name, Price) 
+data <- left_join(index, msic, by="date")
 
 # Create the portfolio specification
 port_spec <- portfolio.spec(colnames(index))
