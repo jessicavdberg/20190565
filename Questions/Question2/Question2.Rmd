@@ -130,7 +130,7 @@ The porfolio returns for large and mid caps are shown below. Because we are anal
 
 The graph for Mid caps return saw very constant returns up until mid year, 2017. Afterwhich it experienced a slight increase followed by a drastic decrease. This would be an indication of an negative, al though constant investment. Investors that are looking for a high return is unlikely to experience this.  The SWIX outperforms the ALSI, which is a preference for when the market is constant/slight increase. However, during negative volatility, the SWIX performs worse. It is important to remember that mid-cap companies can turn into large-cap companies, which also make them attractive to investors. However, you will need to spot the diamond in the rough. 
 ```{r}
-data1 <- T40 %>% filter(Index_Name=="Mid_Caps") %>% 
+data1 <- read_rds("data/T40.rds") %>% filter(Index_Name=="Mid_Caps") %>% 
     mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
     arrange(date) %>% 
     mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
@@ -170,7 +170,7 @@ The portfolio cumulative returns for Large Caps experience much more volatility 
 As seen in th graph below, Large caps present a higher return, but also experienced a downturn with the depletion of economic events in 2020. 
 
 ```{r}
-data1 <- T40 %>% filter(Index_Name=="Large_Caps") %>% 
+data1 <- read_rds("data/T40.rds") %>% filter(Index_Name=="Large_Caps") %>% 
     mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
     arrange(date) %>% 
     mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
@@ -205,7 +205,7 @@ Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date,
     Value, color = Type)) + theme_bw() +theme_bw() +  
     labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Large Caps", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
 ```
-### Sector Analysis
+## Sector Analysis
 
 The industrial sector has preformed relatively well compared to the financial sector (discussed below). The sector has been on an increasing trend with the COVID-19 pandemic resulting in slowdown and negative growth. 
 
@@ -285,61 +285,49 @@ Cum_Comp %>% group_by(Type) %>% ggplot() + geom_line(aes(date,
     Value, color = Type)) + theme_bw() +theme_bw() +  
     labs(x = "Dates", y = "Return", title = "Portfolio Cumulative Returns for Financial Sector", subtitle = "Taking different weight structures into account", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Portfolios:"))
 ```
+
 ## Staritication 
 
-I use the only the index from 2008 onwards since this is the only data that is available.  
-
+I use the only the index from 2008 onward since this is the only data that is available.  Stratification allows you to isolate the periods of high volatility and low volatility.There are slightly more periods of high volatility than low volatility.This could be an indication to steep negative or positive effects. As the top40 is relatively stable, investors should not panic in times of high volatility, but rather hold stock to ensure growth.  
 ```{r}
 
-#data2 <- T40  %>% 
- #   mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
-  #  arrange(date) %>% 
-   # mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
-  #  group_by(year, Tickers) %>%
-  #select(date, Tickers, Return)
+data2 <- T40  %>% 
+    mutate(Tickers = gsub(" SJ Equity", "", Tickers)) %>% 
+    arrange(date) %>% 
+    mutate(year = as.numeric(format(date, format = "%Y%m"))) %>%
+  select(date, Tickers, Return)
 
-# data2 <- data2 %>% group_by(Tickers) %>% 
-  #  mutate(Top = quantile(Return, 0.99), Bot = quantile(Return, 0.01)) %>% 
-   # mutate(Return = ifelse(Return > Top, Top,ifelse(Return < Bot, Bot, Return))) %>% ungroup()
-
-# ZAR <- usdzar %>% filter(date > ymd(20080101)) %>% select(-Name)
+ data2 <- data2 %>%
+   group_by(Tickers) %>% 
+    mutate(Top = quantile(Return, 0.99), Bot = quantile(Return, 0.01)) %>% 
+    mutate(Return = ifelse(Return > Top, Top,ifelse(Return < Bot, Bot, Return))) %>% ungroup() %>% mutate(YearMonth= format(date, "%Y%B"))
  
-# ZARSD <- ZAR %>% 
-#    mutate(YearMonth = format(date, "%Y%B")) %>% 
-#    group_by(YearMonth) %>% summarise(SD = sd(Price)*sqrt(252)) %>% 
-#    mutate(TopQtile = quantile(SD, 0.8), BotQtile = quantile(SD, 0.2))
+ ZAR <- usdzar %>% filter(date > ymd(20080101)) %>% select(-Name)
+ 
+ ZARSD <- ZAR %>% 
+    mutate(YearMonth = format(date, "%Y%B")) %>% 
+    group_by(YearMonth) %>% summarise(SD = sd(Price)*sqrt(252)) %>% 
+    mutate(TopQtile = quantile(SD, 0.8), BotQtile = quantile(SD, 0.2))
 
-# Hi_Vol <- ZARSD %>% filter(SD > TopQtile) %>% pull(YearMonth)
+ Hi_Vol <- ZARSD %>% filter(SD > TopQtile) %>% pull(YearMonth)
+ Low_Vol <- ZARSD %>% filter(SD < BotQtile) %>% pull(YearMonth)
 
-# Low_Vol <- ZARSD %>% filter(SD < BotQtile) %>% pull(YearMonth)
-
-#Perf_comparisons <- function(data2, YMs, Alias){
-    #Unconditional_SD <- 
-      #  data2 %>% 
-        
-       # group_by(Tickers) %>% 
-        
-      #  mutate(Full_SD = sd(Return) * sqrt(252)) %>% 
-        
-       # filter(year %in% YMs) %>% 
-        
-      #  summarise(SD = sd(Return) * sqrt(252), across(.cols = starts_with("Full"), .fns = max)) %>% 
-        
-       # arrange(desc(SD)) %>% mutate(Period = Alias) %>% 
-        
-      #  group_by(Tickers) %>% 
-        
-       # mutate(Ratio = SD / Full_SD)
+Perf_comparisons <- function(data2, YMs, Alias){
+    Unconditional_SD <- 
+        data2 %>% 
+       group_by(Tickers) %>% 
+        mutate(Full_SD = sd(Return) * sqrt(252)) %>% 
+        filter(YearMonth %in% YMs) %>% 
+        summarise(SD = sd(Return) * sqrt(252), across(.cols = starts_with("Full"), .fns = max)) %>% 
+        arrange(desc(SD)) %>% mutate(Period = Alias) %>% 
+        group_by(Tickers) %>% 
+        mutate(Ratio = SD / Full_SD)
+     Unconditional_SD
     
-    # Unconditional_SD
-    
-#}
+}
 
-#perf_hi <- Perf_comparisons(data2, YMs = Hi_Vol, Alias = "High_Vol")
-
-#perf_lo <- Perf_comparisons(data2, YMs = Low_Vol, Alias = "Low_Vol")
-
-
+perf_hi <- Perf_comparisons(data2, YMs = Hi_Vol, Alias = "High_Vol")
+perf_lo <- Perf_comparisons(data2, YMs = Low_Vol, Alias = "Low_Vol")
 
 ```
 
@@ -349,7 +337,7 @@ I use the only the index from 2008 onwards since this is the only data that is a
 ## Caping 
 
 I capped the SWIX to 6 percent and the ALSI to 10 percent (this is how I interpreted the question). 
-I couldn.t get the cap exactly right but I think I was on the right path
+I couldn.t get the cap exactly right but I think I was on the right path, therefore I left the code in. 
 
 ```{r}
 #J400
