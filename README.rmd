@@ -473,6 +473,8 @@ After the oil price stabilized in the early 1990's, volatility for bonds, commod
 
 For the 2020 time-period, the US 10 year bond has a much sigma then the other asset classes. However, it it important to remember that this is during a nation-wide pandemic, and it is not the norm. Overall, oil prices seem to be the most volatile. 
 
+NOTE: Documents Knits perfectly, however, I did notice that the graph changes drastically as soon you upload onto github. I do not know why this happes. An image of the graph is also uploaded, called "image". 
+
 ```{r}
 DCCPre <- dccPre(xts_rtn, include.mean = T, p = 0)
 names(DCCPre)

@@ -6,8 +6,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 395335 21.2     810058 43.3   638940 34.2
-    ## Vcells 713863  5.5    8388608 64.0  1633464 12.5
+    ## Ncells 395475 21.2     810458 43.3   638940 34.2
+    ## Vcells 714618  5.5    8388608 64.0  1633464 12.5
 
 ``` r
 library(tidyverse)
@@ -26,6 +26,14 @@ library(tidyverse)
 
 ``` r
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+
+msci <- read_rds("data/msci.rds")
+bonds <- read_rds("data/bonds_10y.rds")
+comms <- read_rds("data/comms.rds")
+pacman::p_load("MTS", "robustbase")
+pacman::p_load("tidyverse", "devtools", "rugarch", "rmgarch", 
+    "forecast", "tbl2xts", "lubridate", "PerformanceAnalytics", 
+    "ggthemes")
 ```
 
 The main idea underlying these portmanteau tests is to identify if there
@@ -35,14 +43,6 @@ the null of no conditional heteroskedasticity, which supports the use of
 MVGARCH models.
 
 ``` r
-msci <- read_rds("data/msci.rds")
-bonds <- read_rds("data/bonds_10y.rds")
-comms <- read_rds("data/comms.rds")
-pacman::p_load("MTS", "robustbase")
-pacman::p_load("tidyverse", "devtools", "rugarch", "rmgarch", 
-    "forecast", "tbl2xts", "lubridate", "PerformanceAnalytics", 
-    "ggthemes")
-
 # msci %>%mutate(MSCI = gsub("MSCI_", "", Name)) %>% select(-Name) %>% pull(MSCI) %>% unique
 
 msci %>% mutate(MSCI = gsub("MSCI_", "", Name)) %>% 
@@ -121,6 +121,10 @@ For the 2020 time-period, the US 10 year bond has a much sigma then the
 other asset classes. However, it it important to remember that this is
 during a nation-wide pandemic, and it is not the norm. Overall, oil
 prices seem to be the most volatile.
+
+NOTE: Documents Knits perfectly, however, I did notice that the graph
+changes drastically as soon you upload onto github. I do not know why
+this happes. An image of the graph is also uploaded, called “image”.
 
 ``` r
 DCCPre <- dccPre(xts_rtn, include.mean = T, p = 0)
@@ -209,7 +213,7 @@ detach("package:tbl2xts", unload=TRUE)
     ##   namespace 'tbl2xts' is imported by 'rmsfuns' so cannot be unloaded
 
 ``` r
-# DCC <- dccFit(StdRes, type="Engle") # I ran into an error here :"no loop for break/next, jumping to top level" - I tried hard to fix it, but neither me nor google got very far 
+#DCC <- dccFit(StdRes, type="Engle") # I ran into an error here :"no loop for break/next, jumping to top level" - I tried hard to fix it, but neither me nor google got very far 
 
 pacman::p_load("tidyverse", "tbl2xts", "broom")
 ```
