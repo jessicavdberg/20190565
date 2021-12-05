@@ -10,8 +10,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 395930 21.2     811758 43.4   638940 34.2
-    ## Vcells 718439  5.5    8388608 64.0  1633464 12.5
+    ## Ncells 395922 21.2     811735 43.4   638940 34.2
+    ## Vcells 719324  5.5    8388608 64.0  1633464 12.5
 
 ``` r
 library(tidyverse)
@@ -119,6 +119,13 @@ cncy_Carry <- read_rds("data/cncy_Carry.rds")
 cncy_value <- read_rds("data/cncy_value.rds")
 cncyIV <- read_rds("data/cncyIV.rds")
 bbdxy <- read_rds("data/bbdxy.rds")
+msci <- read_rds("data/msci.rds")
+bonds <- read_rds("data/bonds_10y.rds")
+comms <- read_rds("data/comms.rds")
+pacman::p_load("MTS", "robustbase")
+pacman::p_load("tidyverse", "devtools", "rugarch", "rmgarch", 
+    "forecast", "tbl2xts", "lubridate", "PerformanceAnalytics", 
+    "ggthemes")
 ```
 
 # Question 1
@@ -360,16 +367,16 @@ d <- str(pca)
 ```
 
     ## List of 5
-    ##  $ sdev    : num [1:92] 2.8 1.63 1.3 1.24 1.16 ...
-    ##  $ rotation: num [1:92, 1:92] 0.26034 0.02084 0.00814 0.21703 0.11249 ...
+    ##  $ sdev    : num [1:92] 2.82 1.63 1.29 1.25 1.14 ...
+    ##  $ rotation: num [1:92, 1:92] 0.2592 0.0247 0.0175 0.2143 0.1304 ...
     ##   ..- attr(*, "dimnames")=List of 2
     ##   .. ..$ : chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
     ##   .. ..$ : chr [1:92] "PC1" "PC2" "PC3" "PC4" ...
-    ##  $ center  : Named num [1:92] 0.00000431 -0.00001956 0.00000144 0.00001858 0.00000734 ...
+    ##  $ center  : Named num [1:92] 0.00000431 0.0000075 0.00002149 0.00001858 -0.00000261 ...
     ##   ..- attr(*, "names")= chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
-    ##  $ scale   : Named num [1:92] 0.000281 0.000748 0.000975 0.002478 0.000635 ...
+    ##  $ scale   : Named num [1:92] 0.000281 0.000782 0.000839 0.002478 0.000541 ...
     ##   ..- attr(*, "names")= chr [1:92] "ABG" "ACL" "AEG" "AGL" ...
-    ##  $ x       : num [1:3458, 1:92] -1.14 -2.96 -1.6 -2.13 1.61 ...
+    ##  $ x       : num [1:3458, 1:92] 2.87 -2.64 -1.47 -2.3 1.69 ...
     ##   ..- attr(*, "dimnames")=List of 2
     ##   .. ..$ : NULL
     ##   .. ..$ : chr [1:92] "PC1" "PC2" "PC3" "PC4" ...
@@ -385,60 +392,60 @@ a
 
     ## Importance of components:
     ##                            PC1     PC2     PC3     PC4     PC5     PC6     PC7
-    ## Standard deviation     2.80330 1.62874 1.30409 1.23551 1.15805 1.13019 1.11901
-    ## Proportion of Variance 0.08542 0.02883 0.01849 0.01659 0.01458 0.01388 0.01361
-    ## Cumulative Proportion  0.08542 0.11425 0.13274 0.14933 0.16391 0.17779 0.19140
-    ##                           PC8     PC9    PC10    PC11    PC12    PC13   PC14
-    ## Standard deviation     1.1102 1.10532 1.09946 1.09383 1.08831 1.08697 1.0851
-    ## Proportion of Variance 0.0134 0.01328 0.01314 0.01301 0.01287 0.01284 0.0128
-    ## Cumulative Proportion  0.2048 0.21808 0.23122 0.24422 0.25710 0.26994 0.2827
-    ##                           PC15    PC16    PC17   PC18    PC19   PC20    PC21
-    ## Standard deviation     1.08189 1.07768 1.07069 1.0681 1.06486 1.0595 1.05319
-    ## Proportion of Variance 0.01272 0.01262 0.01246 0.0124 0.01233 0.0122 0.01206
-    ## Cumulative Proportion  0.29546 0.30808 0.32054 0.3329 0.34527 0.3575 0.36953
-    ##                           PC22    PC23    PC24    PC25    PC26    PC27    PC28
-    ## Standard deviation     1.05245 1.04661 1.04607 1.04321 1.03930 1.03611 1.03200
-    ## Proportion of Variance 0.01204 0.01191 0.01189 0.01183 0.01174 0.01167 0.01158
-    ## Cumulative Proportion  0.38157 0.39347 0.40537 0.41720 0.42894 0.44061 0.45218
-    ##                           PC29    PC30    PC31    PC32    PC33    PC34    PC35
-    ## Standard deviation     1.02755 1.02535 1.02350 1.02206 1.01578 1.00856 1.00763
-    ## Proportion of Variance 0.01148 0.01143 0.01139 0.01135 0.01122 0.01106 0.01104
-    ## Cumulative Proportion  0.46366 0.47509 0.48647 0.49783 0.50904 0.52010 0.53114
-    ##                           PC36    PC37    PC38    PC39    PC40   PC41    PC42
-    ## Standard deviation     1.00178 1.00064 0.99600 0.99248 0.99015 0.9874 0.98569
-    ## Proportion of Variance 0.01091 0.01088 0.01078 0.01071 0.01066 0.0106 0.01056
-    ## Cumulative Proportion  0.54204 0.55293 0.56371 0.57442 0.58507 0.5957 0.60623
-    ##                           PC43    PC44    PC45    PC46   PC47    PC48    PC49
-    ## Standard deviation     0.98095 0.97688 0.97538 0.97296 0.9688 0.96800 0.96668
-    ## Proportion of Variance 0.01046 0.01037 0.01034 0.01029 0.0102 0.01019 0.01016
-    ## Cumulative Proportion  0.61669 0.62706 0.63740 0.64769 0.6579 0.66808 0.67824
-    ##                           PC50    PC51    PC52    PC53    PC54   PC55    PC56
-    ## Standard deviation     0.96073 0.95386 0.95165 0.94804 0.94618 0.9448 0.94172
-    ## Proportion of Variance 0.01003 0.00989 0.00984 0.00977 0.00973 0.0097 0.00964
-    ## Cumulative Proportion  0.68827 0.69816 0.70800 0.71777 0.72750 0.7372 0.74684
-    ##                           PC57    PC58    PC59    PC60    PC61    PC62    PC63
-    ## Standard deviation     0.93833 0.93373 0.92944 0.92604 0.91900 0.91667 0.91250
-    ## Proportion of Variance 0.00957 0.00948 0.00939 0.00932 0.00918 0.00913 0.00905
-    ## Cumulative Proportion  0.75642 0.76589 0.77528 0.78460 0.79378 0.80292 0.81197
-    ##                           PC64    PC65    PC66    PC67    PC68   PC69    PC70
-    ## Standard deviation     0.90856 0.90713 0.90247 0.89784 0.89163 0.8894 0.88632
-    ## Proportion of Variance 0.00897 0.00894 0.00885 0.00876 0.00864 0.0086 0.00854
-    ## Cumulative Proportion  0.82094 0.82988 0.83874 0.84750 0.85614 0.8647 0.87328
-    ##                           PC71    PC72    PC73    PC74    PC75    PC76    PC77
-    ## Standard deviation     0.87781 0.87540 0.87030 0.86441 0.85639 0.84684 0.83893
-    ## Proportion of Variance 0.00838 0.00833 0.00823 0.00812 0.00797 0.00779 0.00765
-    ## Cumulative Proportion  0.88165 0.88998 0.89821 0.90634 0.91431 0.92210 0.92975
-    ##                          PC78    PC79    PC80    PC81    PC82    PC83    PC84
-    ## Standard deviation     0.8308 0.81802 0.80676 0.79033 0.77788 0.75341 0.69353
-    ## Proportion of Variance 0.0075 0.00727 0.00707 0.00679 0.00658 0.00617 0.00523
-    ## Cumulative Proportion  0.9373 0.94453 0.95160 0.95839 0.96497 0.97114 0.97637
-    ##                          PC85   PC86   PC87   PC88   PC89    PC90    PC91
-    ## Standard deviation     0.6646 0.6291 0.5832 0.5163 0.4979 0.48669 0.40464
-    ## Proportion of Variance 0.0048 0.0043 0.0037 0.0029 0.0027 0.00257 0.00178
-    ## Cumulative Proportion  0.9812 0.9855 0.9892 0.9921 0.9948 0.99733 0.99911
+    ## Standard deviation     2.81999 1.62800 1.29359 1.24760 1.14409 1.13310 1.13005
+    ## Proportion of Variance 0.08644 0.02881 0.01819 0.01692 0.01423 0.01396 0.01388
+    ## Cumulative Proportion  0.08644 0.11525 0.13344 0.15035 0.16458 0.17854 0.19242
+    ##                            PC8     PC9    PC10    PC11    PC12    PC13   PC14
+    ## Standard deviation     1.11580 1.11109 1.10469 1.10100 1.09820 1.08680 1.0852
+    ## Proportion of Variance 0.01353 0.01342 0.01326 0.01318 0.01311 0.01284 0.0128
+    ## Cumulative Proportion  0.20595 0.21937 0.23263 0.24581 0.25892 0.27176 0.2846
+    ##                           PC15    PC16    PC17    PC18    PC19    PC20    PC21
+    ## Standard deviation     1.07900 1.07474 1.07202 1.06849 1.06666 1.06061 1.05575
+    ## Proportion of Variance 0.01265 0.01256 0.01249 0.01241 0.01237 0.01223 0.01212
+    ## Cumulative Proportion  0.29721 0.30977 0.32226 0.33467 0.34704 0.35926 0.37138
+    ##                           PC22   PC23    PC24    PC25    PC26    PC27    PC28
+    ## Standard deviation     1.05191 1.0509 1.04551 1.04366 1.03880 1.03608 1.03372
+    ## Proportion of Variance 0.01203 0.0120 0.01188 0.01184 0.01173 0.01167 0.01162
+    ## Cumulative Proportion  0.38341 0.3954 0.40729 0.41913 0.43086 0.44253 0.45414
+    ##                           PC29    PC30    PC31   PC32    PC33    PC34    PC35
+    ## Standard deviation     1.03132 1.02773 1.02251 1.0194 1.01478 1.01384 1.01112
+    ## Proportion of Variance 0.01156 0.01148 0.01136 0.0113 0.01119 0.01117 0.01111
+    ## Cumulative Proportion  0.46570 0.47719 0.48855 0.4998 0.51104 0.52221 0.53332
+    ##                           PC36   PC37    PC38    PC39    PC40    PC41    PC42
+    ## Standard deviation     1.00752 1.0013 0.99847 0.99341 0.99144 0.98902 0.98629
+    ## Proportion of Variance 0.01103 0.0109 0.01084 0.01073 0.01068 0.01063 0.01057
+    ## Cumulative Proportion  0.54436 0.5553 0.56609 0.57682 0.58750 0.59813 0.60871
+    ##                           PC43    PC44    PC45    PC46    PC47   PC48    PC49
+    ## Standard deviation     0.98332 0.97745 0.97459 0.97372 0.96847 0.9638 0.96215
+    ## Proportion of Variance 0.01051 0.01038 0.01032 0.01031 0.01019 0.0101 0.01006
+    ## Cumulative Proportion  0.61922 0.62960 0.63993 0.65023 0.66043 0.6705 0.68059
+    ##                           PC50    PC51    PC52    PC53   PC54    PC55    PC56
+    ## Standard deviation     0.96047 0.95728 0.95602 0.94823 0.9447 0.94077 0.93544
+    ## Proportion of Variance 0.01003 0.00996 0.00993 0.00977 0.0097 0.00962 0.00951
+    ## Cumulative Proportion  0.69061 0.70057 0.71051 0.72028 0.7300 0.73960 0.74911
+    ##                           PC57   PC58    PC59    PC60    PC61    PC62    PC63
+    ## Standard deviation     0.93393 0.9302 0.92655 0.92115 0.91942 0.91434 0.91285
+    ## Proportion of Variance 0.00948 0.0094 0.00933 0.00922 0.00919 0.00909 0.00906
+    ## Cumulative Proportion  0.75859 0.7680 0.77733 0.78655 0.79574 0.80483 0.81389
+    ##                           PC64    PC65    PC66    PC67    PC68    PC69    PC70
+    ## Standard deviation     0.90805 0.90524 0.90227 0.90095 0.89498 0.88746 0.88345
+    ## Proportion of Variance 0.00896 0.00891 0.00885 0.00882 0.00871 0.00856 0.00848
+    ## Cumulative Proportion  0.82285 0.83176 0.84060 0.84943 0.85813 0.86670 0.87518
+    ##                           PC71    PC72    PC73    PC74    PC75   PC76    PC77
+    ## Standard deviation     0.88225 0.87554 0.86225 0.86048 0.84660 0.8363 0.83151
+    ## Proportion of Variance 0.00846 0.00833 0.00808 0.00805 0.00779 0.0076 0.00752
+    ## Cumulative Proportion  0.88364 0.89197 0.90005 0.90810 0.91589 0.9235 0.93101
+    ##                           PC78    PC79    PC80    PC81    PC82    PC83    PC84
+    ## Standard deviation     0.82172 0.81170 0.80340 0.78140 0.76212 0.71197 0.68862
+    ## Proportion of Variance 0.00734 0.00716 0.00702 0.00664 0.00631 0.00551 0.00515
+    ## Cumulative Proportion  0.93835 0.94551 0.95253 0.95916 0.96548 0.97099 0.97614
+    ##                           PC85    PC86    PC87    PC88    PC89    PC90    PC91
+    ## Standard deviation     0.67198 0.62698 0.60226 0.51428 0.49942 0.47910 0.40543
+    ## Proportion of Variance 0.00491 0.00427 0.00394 0.00287 0.00271 0.00249 0.00179
+    ## Cumulative Proportion  0.98105 0.98532 0.98926 0.99214 0.99485 0.99734 0.99913
     ##                           PC92
-    ## Standard deviation     0.28548
-    ## Proportion of Variance 0.00089
+    ## Standard deviation     0.28268
+    ## Proportion of Variance 0.00087
     ## Cumulative Proportion  1.00000
 
 ``` r
@@ -639,7 +646,7 @@ volatility are.
 
 ``` r
 plotc <- cncy %>% filter(Name==c("SouthAfrica_Cncy")) %>% group_by(Name) %>%  mutate(dlogprice = log(Price) - log(lag(Price))) %>%
-    filter(date > first(date)) %>%
+    filter(date > lubridate::ymd(19900101)) %>%
     ggplot() +
     geom_line(aes(x=date,y=dlogprice), color="red") + theme_bw() +  
     labs(x = "Dates", y = "", title = "USD/ZAR", subtitle = "", caption = "Note:\nOwn Calculations") + guides(col=guide_legend("Currency"))
@@ -656,7 +663,7 @@ results =‘asis’
 ``` r
 data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>% group_by(Name) %>%
     mutate(dlogprice = log(Price) - log(lag(Price))) %>%
-    filter(date > first(date)) %>%
+    filter(date > lubridate::ymd(19900101)) %>%
     select(date, dlogprice)
 ```
 
@@ -763,14 +770,14 @@ rate.
 ``` r
 carry <- cncy_Carry %>% mutate(carry_c = log(Price) - log(lag(Price))) %>%
     mutate(scaledret = (carry_c - mean(carry_c, na.rm = T))) %>% 
-filter(date > first(date))  %>%
+filter(date > lubridate::ymd(19900101))  %>%
     select(date, carry_c)
    
 
 data <-  cncy %>% filter(Name==c( "SouthAfrica_Cncy")) %>%
     mutate(SA_ZAR = log(Price) - log(lag(Price))) %>%
     mutate(scaledprice = (SA_ZAR - mean(SA_ZAR, na.rm = T))) %>%
-    filter(date > first(date)) %>%
+    filter(date > lubridate::ymd(19900101)) %>%
      filter(date >= lubridate::ymd(20000919)) %>%
     select(date, SA_ZAR)
 
@@ -782,4 +789,160 @@ plotg <- left_join(carry, data, by= "date") %>% gather(Name, price, -date) %>% g
 plotg
 ```
 
+    ## Warning: Removed 2 row(s) containing missing values (geom_path).
+
 ![](README_files/figure-markdown_github/unnamed-chunk-19-1.png)
+
+# Question 5
+
+The main idea underlying these portmanteau tests is to identify if there
+is any dependence structure which is yet unexplained by the fitted
+model. The MARCH test indicates that all the MV portmanteau tests reject
+the null of no conditional heteroskedasticity, which supports the use of
+MVGARCH models.
+
+``` r
+dat <- msci %>% mutate(MSCI = gsub("MSCI_", "", Name)) %>% 
+    select(-Name) %>%
+    filter(MSCI == c("RE", "USREIT", "ACWI")) %>% 
+    select(date, MSCI, Price) %>%
+    spread(MSCI, Price)
+
+    
+data <- left_join(msci %>% arrange(date) %>%
+                      group_by(Name) %>% 
+                      mutate(Price = (Price/lag(Price)) -1) %>%
+                     spread(Name, Price), comms %>%
+                      group_by(Name) %>% 
+                      mutate(Price = Price/lag(Price) -1) %>% 
+                      spread(Name, Price), by= "date")
+
+together <- left_join(data, bonds %>%
+                      group_by(Name) %>% 
+                      mutate(Bond_10Yr = Bond_10Yr/lag(Bond_10Yr) -1) %>%
+                          spread(Name, Bond_10Yr), by="date")  %>% select(date, MSCI_Value, MSCI_Growth, US_10Yr, Gold, Oil_Brent, Bcom_Index) %>%
+    filter(date > lubridate::ymd(19900101)) %>%
+    gather(Name, Price, -date)
+  
+    
+xts_rtn <- together %>% tbl_xts(., cols_to_xts = "Price", spread_by = "Name")
+# MarchTest(xts_rtn) # This works fine in the Question part but then as soon as I knit it gives me an error I cant seem ti fix
+```
+
+The dynamic conditional correlation (DCC) models offer a simple and more
+parsimonious means of doing MV-vol modeling. The graph below estimates
+the volatility for each series.
+
+As seen in the graph, oil was much more volatility than other
+commodities, equities and bonds in the early 1990’s. This is due to
+Iraq’s invasion of Kuwait and the first Gulf war send prices to a then
+all-time high of $41.90 a barrel in October but gains are short-lived as
+U.S.-led forces secure the giant oilfields of Saudi Arabia and tanker
+lanes in the Gulf.
+
+After the oil price stabilized in the early 1990’s, volatility for
+bonds, commodities and equities have been very similar and seem to move
+in the same direction. This can be an indication that different asset
+classes have increased in their convergences. Holding different asset
+classes if not diversification. This is simply not putting your egg in
+the same basket. However, investors should instead put different eggs in
+negatively correlated basket. The graph below suggest that in the early
+1990’s, different asset classes may have been efficient enough for
+diversification, but not anymore.
+
+For the 2020 time-period, the US 10 year bond has a much sigma then the
+other asset classes. However, it it important to remember that this is
+during a nation-wide pandemic, and it is not the norm. Overall, oil
+prices seem to be the most volatile.
+
+``` r
+DCCPre <- dccPre(xts_rtn, include.mean = T, p = 0)
+```
+
+    ## Sample mean of the returns:  0.6747025 26.48086 0.00002959201 0.0002280285 0.0004308639 0.0000540033
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  1 
+    ## Estimates:  0.001408 0.940146 0.058396 
+    ## se.coef  :  0.005298 0.200229 0.199612 
+    ## t-value  :  0.265782 4.695346 0.292547
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  2 
+    ## Estimates:  0.079488 0.999498 0.001147 
+    ## se.coef  :  10.96332 0.032403 0.001994 
+    ## t-value  :  0.00725 30.84542 0.575188
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  3 
+    ## Estimates:  0.000001 0.061477 0.938376 
+    ## se.coef  :  0 0.004266 0.003953 
+    ## t-value  :  4.901468 14.41016 237.4113
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  4 
+    ## Estimates:  0 0.044186 0.956347 
+    ## se.coef  :  0 0.003096 0.002789 
+    ## t-value  :  4.181834 14.27213 342.958
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  5 
+    ## Estimates:  0.000004 0.07603 0.918303 
+    ## se.coef  :  0.000001 0.005067 0.005223 
+    ## t-value  :  5.849574 15.00597 175.8205
+
+    ## Warning: Using formula(x) is deprecated when x is a character vector of length > 1.
+    ##   Consider formula(paste(x, collapse = " ")) instead.
+
+    ## Component:  6 
+    ## Estimates:  0 0.046798 0.949656 
+    ## se.coef  :  0 0.003627 0.003794 
+    ## t-value  :  4.856683 12.90159 250.278
+
+``` r
+names(DCCPre)
+```
+
+    ## [1] "marVol"  "sresi"   "est"     "se.coef"
+
+``` r
+Vol <- DCCPre$marVol
+colnames(Vol) <- colnames(xts_rtn)
+Vol <- 
+  data.frame( cbind( date = index(xts_rtn), Vol)) %>% 
+  mutate(date = as.Date(date)) %>%  tibble::as_tibble()  
+
+TidyVol <- Vol %>% gather(Name, Sigma, -date)
+
+plot9 <- ggplot(TidyVol) + geom_line(aes(x = date, y = Sigma, colour = Name)) 
+plot9
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
+
+``` r
+StdRes <- DCCPre$sresi
+
+pacman::p_load("tidyverse", "tbl2xts", "broom", "rmsfuns", "fmxdat")
+detach("package:tidyverse", unload=TRUE)
+detach("package:tbl2xts", unload=TRUE)
+```
+
+    ## Warning: 'tbl2xts' namespace cannot be unloaded:
+    ##   namespace 'tbl2xts' is imported by 'rmsfuns' so cannot be unloaded
+
+``` r
+# DCC <- dccFit(StdRes, type="Engle") # I ran into an error here :"no loop for break/next, jumping to top level" - I tried hard to fix it, but neither me nor google got very far 
+
+pacman::p_load("tidyverse", "tbl2xts", "broom")
+```

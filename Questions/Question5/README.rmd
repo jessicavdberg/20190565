@@ -15,23 +15,84 @@ library(tidyverse)
 list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
 ```
 
+The main idea underlying these portmanteau tests is to identify if there is any dependence structure which is yet unexplained by the fitted model. The MARCH test indicates that all the MV portmanteau tests reject the null of no conditional heteroskedasticity, which supports the use of MVGARCH models. 
 
 ```{r}
 msci <- read_rds("data/msci.rds")
 bonds <- read_rds("data/bonds_10y.rds")
 comms <- read_rds("data/comms.rds")
+pacman::p_load("MTS", "robustbase")
+pacman::p_load("tidyverse", "devtools", "rugarch", "rmgarch", 
+    "forecast", "tbl2xts", "lubridate", "PerformanceAnalytics", 
+    "ggthemes")
 
-msci %>%mutate(MSCI = gsub("MSCI_", "", Name)) %>% select(-Name) %>% pull(MSCI) %>% unique
+# msci %>%mutate(MSCI = gsub("MSCI_", "", Name)) %>% select(-Name) %>% pull(MSCI) %>% unique
 
 msci %>% mutate(MSCI = gsub("MSCI_", "", Name)) %>% 
     select(-Name) %>%
-    filter(MSCI == c("RE", "USREIT", "ACWI")) %>% spread(Price, )
+    filter(MSCI == c("RE", "USREIT", "ACWI")) %>% 
+    select(date, MSCI, Price) %>%
+    spread(MSCI, Price)
+
     
+data <- left_join(msci %>% arrange(date) %>%
+                      group_by(Name) %>% 
+                      mutate(Price = (Price/lag(Price)) -1) %>%
+                     spread(Name, Price), comms %>%
+                      group_by(Name) %>% 
+                      mutate(Price = Price/lag(Price) -1) %>% 
+                      spread(Name, Price), by= "date")
 
-comms %>% pull(Name) %>% unique
+together <- left_join(data, bonds %>%
+                      group_by(Name) %>% 
+                      mutate(Bond_10Yr = Bond_10Yr/lag(Bond_10Yr) -1) %>%
+                          spread(Name, Bond_10Yr), by="date")  %>% select(date, MSCI_Value, MSCI_Growth, US_10Yr, Gold, Oil_Brent, Bcom_Index) %>%
+    filter(date > lubridate::ymd(19900101)) %>%
+    gather(Name, Price, -date)
+  
+    
+xts_rtn <- together %>% tbl_xts(., cols_to_xts = "Price", spread_by = "Name")
+MarchTest(xts_rtn)
 
-bonds %>% pull(Name) %>% unique
 
+```
+The dynamic conditional correlation (DCC) models offer a simple and more parsimonious means of doing MV-vol modeling. The graph below estimates the volatility for each series. 
+
+As seen in the graph, oil was much more volatility than other commodities, equities and bonds in the early 1990's. This is due to Iraq’s invasion of Kuwait and the first Gulf war send prices to a then all-time high of $41.90 a barrel in October but gains are short-lived as U.S.-led forces secure the giant oilfields of Saudi Arabia and tanker lanes in the Gulf. 
+
+After the oil price stabilized in the early 1990's, volatility for bonds, commodities and equities have been very similar and seem to move in the same direction. This can be an indication that different asset classes have increased in their convergences. Holding different asset classes if not diversification. This is simply not putting your egg in the same basket. However, investors should instead put different eggs in negatively correlated basket. The graph below suggest that in the early 1990's, different asset classes may have been efficient enough for diversification, but not anymore. 
+
+For the 2020 time-period, the US 10 year bond has a much sigma then the other asset classes. However, it it important to remember that this is during a nation-wide pandemic, and it is not the norm. Overall, oil prices seem to be the most volatile. 
+
+```{r}
+DCCPre <- dccPre(xts_rtn, include.mean = T, p = 0)
+names(DCCPre)
+
+Vol <- DCCPre$marVol
+colnames(Vol) <- colnames(xts_rtn)
+Vol <- 
+  data.frame( cbind( date = index(xts_rtn), Vol)) %>% 
+  mutate(date = as.Date(date)) %>%  tibble::as_tibble()  
+
+TidyVol <- Vol %>% gather(Name, Sigma, -date)
+
+plot9 <- ggplot(TidyVol) + geom_line(aes(x = date, y = Sigma, colour = Name)) 
+plot9
+
+```
+
+
+
+```{r}
+
+StdRes <- DCCPre$sresi
+
+pacman::p_load("tidyverse", "tbl2xts", "broom", "rmsfuns", "fmxdat")
+detach("package:tidyverse", unload=TRUE)
+detach("package:tbl2xts", unload=TRUE)
+# DCC <- dccFit(StdRes, type="Engle") # I ran into an error here :"no loop for break/next, jumping to top level" - I tried hard to fix it, but neither me nor google got very far 
+
+pacman::p_load("tidyverse", "tbl2xts", "broom")
 
 ```
 
