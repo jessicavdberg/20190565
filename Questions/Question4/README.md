@@ -275,7 +275,24 @@ plotd
 ```
 
     ## NULL
+```{r}
+plot(garchfit1, which = 1)
+```
 
+```{r}
+plot(garchfit1, which = 3)
+```
+
+
+
+```{r}
+plot(garchfit1, which = 8)
+```
+
+
+```{r}
+plot(garchfit1, which = 9)
+```
 ## Carry trade
 
 The carry trade strategy has been popular around investors since 1980,
